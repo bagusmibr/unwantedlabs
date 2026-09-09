@@ -1,0 +1,124 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 32px 80px;
+  position: relative;
+  z-index: 1;
+}
+
+.card {
+  width: 100%;
+  max-width: 380px;
+}
+
+.logoWrap {
+  text-align: center;
+  margin-bottom: 40px;
+  animation: fadeUp 0.4s ease both;
+}
+
+.logoWrap img {
+  max-width: 160px;
+  opacity: 0.85;
+}
+
+.heading {
+  margin-bottom: 32px;
+  animation: fadeUp 0.4s 0.08s ease both;
+}
+
+.title {
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 6px;
+}
+
+.sub {
+  font-size: 24px;
+  font-weight: 200;
+  letter-spacing: -0.01em;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.googleBtn {
+  width: 100%;
+  background: transparent !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  font-weight: 400 !important;
+  padding: 14px !important;
+  transition: border-color 0.2s ease, background 0.2s ease !important;
+  animation: fadeUp 0.4s 0.12s ease both;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.googleBtn:hover:not(:disabled) {
+  border-color: rgba(255,255,255,0.4) !important;
+  background: rgba(255,255,255,0.03) !important;
+  opacity: 1 !important;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  margin-bottom: 20px;
+  animation: fadeUp 0.4s 0.15s ease both;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: fadeUp 0.4s 0.18s ease both;
+}
+
+.error {
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.5);
+}
+
+.footer {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  margin-top: 28px;
+  animation: fadeUp 0.4s 0.25s ease both;
+}
+.footer a {
+  color: rgba(255,255,255,0.4);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  padding-bottom: 1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.footer a:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
