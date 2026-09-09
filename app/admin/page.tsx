@@ -3,10 +3,18 @@ import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import styles from "./admin.module.css";
 
+interface Device {
+  fingerprint: string;
+  ip: string;
+  userAgent: string;
+  firstSeen: { _seconds: number } | null;
+  lastSeen: { _seconds: number } | null;
+}
 interface UserRow {
   uid: string; name: string; email: string; hasAccess: boolean;
   accessGrantedAt?: { _seconds: number } | null;
   createdAt?: { _seconds: number } | null;
+  devices?: Device[];
 }
 interface Pricing {
   normalPrice: number; discountPrice: number; discountActive: boolean;
@@ -191,6 +199,7 @@ export default function AdminPage() {
                         <th>Status</th>
                         <th>Bergabung</th>
                         <th>Akses Diberikan</th>
+                        <th>Perangkat / IP</th>
                         <th>Aksi</th>
                       </tr>
                     </thead>
@@ -213,6 +222,34 @@ export default function AdminPage() {
                           </td>
                           <td style={{ fontSize: 11, fontFamily: "ui-monospace, monospace" }}>{fmtDate(u.createdAt)}</td>
                           <td style={{ fontSize: 11, fontFamily: "ui-monospace, monospace" }}>{fmtDate(u.accessGrantedAt)}</td>
+                          <td>
+                            {/* Device / IP Info */}
+                            {!u.devices || u.devices.length === 0 ? (
+                              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em" }}>Belum login</span>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                {u.devices.map((dev, idx) => (
+                                  <div key={dev.fingerprint} style={{
+                                    padding: "6px 10px",
+                                    border: `1px solid ${u.devices!.length > 1 ? "rgba(255,100,100,0.3)" : "rgba(255,255,255,0.06)"}`,
+                                    background: u.devices!.length > 1 ? "rgba(255,50,50,0.04)" : "transparent",
+                                  }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                      {u.devices!.length > 1 && (
+                                        <span title="Multiple devices detected!" style={{ color: "rgba(255,100,100,0.9)", fontSize: 9, letterSpacing: "0.15em" }}>⚠</span>
+                                      )}
+                                      <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>
+                                        {dev.ip}
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", marginTop: 2, letterSpacing: "0.08em" }}>
+                                      PC #{idx + 1} · Terakhir: {fmtDate(dev.lastSeen)}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
                           <td>
                             <div className={styles.actionBtns}>
                               {u.hasAccess ? (

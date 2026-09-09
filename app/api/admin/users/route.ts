@@ -13,7 +13,27 @@ export async function GET(req: NextRequest) {
 
     const adminDb = await getAdminDb();
     const snap = await adminDb.collection("users").orderBy("createdAt", "desc").limit(200).get();
-    const users = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+
+    // Fetch devices subcollection for each user in parallel
+    const users = await Promise.all(
+      snap.docs.map(async (d) => {
+        const devicesSnap = await adminDb
+          .collection("users")
+          .doc(d.id)
+          .collection("devices")
+          .get();
+
+        const devices = devicesSnap.docs.map((dev) => ({
+          fingerprint: dev.id,
+          ip: dev.data().ip || "—",
+          userAgent: dev.data().userAgent || "",
+          firstSeen: dev.data().firstSeen || null,
+          lastSeen: dev.data().lastSeen || null,
+        }));
+
+        return { uid: d.id, ...d.data(), devices };
+      })
+    );
 
     return NextResponse.json({ ok: true, users });
   } catch {
