@@ -13,11 +13,17 @@ async function getAdminApp(): Promise<AdminApp> {
   if (getApps().length > 0) {
     _adminApp = getApps()[0];
   } else {
+    // Normalize private key: remove surrounding quotes, convert \n to actual newlines
+    const rawKey = process.env.FIREBASE_PRIVATE_KEY || "";
+    const privateKey = rawKey
+      .replace(/^["']|["']$/g, "")   // Remove surrounding quotes
+      .replace(/\\n/g, "\n");         // Convert \n escape to actual newlines
+
     _adminApp = initializeApp({
       credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+        privateKey,
       }),
     });
   }
