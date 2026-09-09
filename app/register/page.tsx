@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, sendEmailVerification, signOut } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, signInWithRedirect, getRedirectResult, GoogleAuthProvider, sendEmailVerification, signOut } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import styles from "../login/login.module.css";
@@ -18,6 +18,29 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
 
   const [success, setSuccess] = useState("");
+
+  // Handle redirect result on page load (after Google redirect)
+  useEffect(() => {
+    if (!auth) return;
+    setGoogleLoading(true);
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result?.user) {
+          await saveUserAndSession(result.user.uid, await result.user.getIdToken(), {
+            name: result.user.displayName || "",
+            email: result.user.email || "",
+            photo: result.user.photoURL || "",
+          });
+        } else {
+          setGoogleLoading(false);
+        }
+      })
+      .catch(() => {
+        setError("Login Google gagal.");
+        setGoogleLoading(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function saveUserAndSession(uid: string, token: string, userData: { name: string; email: string; photo: string }) {
     const res = await fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
@@ -50,10 +73,7 @@ export default function RegisterPage() {
   async function onGoogle() {
     setError(""); setGoogleLoading(true);
     try {
-      const cred = await signInWithPopup(auth!, new GoogleAuthProvider());
-      await saveUserAndSession(cred.user.uid, await cred.user.getIdToken(), {
-        name: cred.user.displayName || "", email: cred.user.email || "", photo: cred.user.photoURL || "",
-      });
+      await signInWithRedirect(auth!, new GoogleAuthProvider());
     } catch { setError("Daftar dengan Google gagal."); setGoogleLoading(false); }
   }
 

@@ -1,9 +1,14 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
+} from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import styles from "./login.module.css";
 
@@ -26,6 +31,25 @@ export default function LoginPage() {
     localStorage.setItem("ul_user", JSON.stringify({ email: user.email, name: user.displayName || user.email?.split("@")[0], photo: user.photoURL, isAdmin: data.isAdmin }));
     router.push("/dashboard");
   }
+
+  // Handle redirect result on page load (after Google redirect)
+  useEffect(() => {
+    if (!auth) return;
+    setGoogleLoading(true);
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result?.user) {
+          await handleSession(await result.user.getIdToken(), result.user);
+        } else {
+          setGoogleLoading(false);
+        }
+      })
+      .catch(() => {
+        setError("Login Google gagal. Coba lagi.");
+        setGoogleLoading(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function resendVerification(user: any) {
     try {
@@ -63,8 +87,7 @@ export default function LoginPage() {
   async function onGoogle() {
     setError(""); setGoogleLoading(true);
     try {
-      const cred = await signInWithPopup(auth!, new GoogleAuthProvider());
-      await handleSession(await cred.user.getIdToken(), cred.user);
+      await signInWithRedirect(auth!, new GoogleAuthProvider());
     } catch {
       setError("Login Google gagal.");
       setGoogleLoading(false);
