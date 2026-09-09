@@ -1,26 +1,40 @@
-import { initializeApp, getApps, cert, App } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+// All exports are async to support dynamic imports, avoiding ESM bundling issues
+// with firebase-admin in Next.js 15+ with Turbopack
 
-let adminApp: App;
+type AdminApp = import("firebase-admin/app").App;
 
-function getAdminApp(): App {
-  if (getApps().length === 0) {
-    adminApp = initializeApp({
+let _adminApp: AdminApp | null = null;
+
+async function getAdminApp(): Promise<AdminApp> {
+  if (_adminApp) return _adminApp;
+
+  const { initializeApp, getApps, cert } = await import("firebase-admin/app");
+
+  if (getApps().length > 0) {
+    _adminApp = getApps()[0];
+  } else {
+    _adminApp = initializeApp({
       credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
       }),
     });
-  } else {
-    adminApp = getApps()[0];
   }
-  return adminApp;
+  return _adminApp!;
 }
 
-export const adminAuth = () => getAuth(getAdminApp());
-export const adminDb = () => getFirestore(getAdminApp());
+export async function getAdminAuth() {
+  const app = await getAdminApp();
+  const { getAuth } = await import("firebase-admin/auth");
+  return getAuth(app);
+}
+
+export async function getAdminDb() {
+  const app = await getAdminApp();
+  const { getFirestore } = await import("firebase-admin/firestore");
+  return getFirestore(app);
+}
 
 export function isAdmin(email: string | undefined): boolean {
   if (!email) return false;

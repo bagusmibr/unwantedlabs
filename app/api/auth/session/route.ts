@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebase-admin";
+import { getAdminAuth, getAdminDb, isAdmin } from "@/lib/firebase-admin";
 
 export async function POST(req: Request) {
   try {
     const { token } = await req.json();
-    const decoded = await adminAuth().verifyIdToken(token);
+    const adminAuth = await getAdminAuth();
+    const decoded = await adminAuth.verifyIdToken(token);
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
-    const sessionCookie = await adminAuth().createSessionCookie(token, { expiresIn });
+    const sessionCookie = await adminAuth.createSessionCookie(token, { expiresIn });
 
-    const { isAdmin, adminDb } = await import("@/lib/firebase-admin");
     const adminStatus = isAdmin(decoded.email);
 
     // Ensure user exists in Firestore
-    const userRef = adminDb().collection("users").doc(decoded.uid);
+    const adminDb = await getAdminDb();
+    const userRef = adminDb.collection("users").doc(decoded.uid);
     const snap = await userRef.get();
     if (!snap.exists) {
       await userRef.set({
@@ -33,7 +34,8 @@ export async function POST(req: Request) {
       path: "/",
     });
     return res;
-  } catch {
-    return NextResponse.json({ ok: false, error: "Invalid token" }, { status: 401 });
+  } catch (e: unknown) {
+    console.error("Session error:", e);
+    return NextResponse.json({ ok: false, error: String(e) }, { status: 401 });
   }
 }
