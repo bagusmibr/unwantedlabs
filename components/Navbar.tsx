@@ -4,12 +4,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import styles from "./Navbar.module.css";
+import { useLang } from "@/lib/lang";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<{ email: string; name: string; isAdmin?: boolean } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { lang, setLang } = useLang();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -25,7 +27,7 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { href: "/", label: "Home" },
+    { href: "/", label: lang === "id" ? "Home" : "Home" },
     { href: "/inspector", label: "Inspector" },
   ];
 
@@ -53,13 +55,26 @@ export default function Navbar() {
 
         {/* Right */}
         <div className={styles.right}>
+          {/* Language Toggle */}
+          <button
+            className={styles.langToggle}
+            onClick={() => setLang(lang === "id" ? "en" : "id")}
+            title="Switch Language"
+          >
+            <span className={lang === "id" ? styles.langActive : styles.langInactive}>ID</span>
+            <span className={styles.langSep}>|</span>
+            <span className={lang === "en" ? styles.langActive : styles.langInactive}>EN</span>
+          </button>
+
           {user ? (
             <div className={styles.userMenu} onClick={() => setMenuOpen(!menuOpen)}>
               <div className={styles.avatar}>{(user.name || user.email || "U")[0].toUpperCase()}</div>
               <span className={styles.userName}>{user.name?.split(" ")[0]}</span>
               {menuOpen && (
                 <div className={styles.dropdown}>
-                  <Link href="/dashboard" className={styles.dropItem} onClick={() => setMenuOpen(false)}>Dashboard</Link>
+                  <Link href="/dashboard" className={styles.dropItem} onClick={() => setMenuOpen(false)}>
+                    Dashboard
+                  </Link>
                   {user.isAdmin && (
                     <Link href="/admin" className={styles.dropItem} onClick={() => setMenuOpen(false)}>Admin</Link>
                   )}
@@ -72,15 +87,17 @@ export default function Navbar() {
                       window.location.href = "/";
                     }}
                   >
-                    Logout
+                    {lang === "id" ? "Logout" : "Sign Out"}
                   </button>
                 </div>
               )}
             </div>
           ) : (
             <>
-              <Link href="/login" className={styles.authLink}>Login</Link>
-              <Link href="/register" className="btn" style={{ padding: "10px 20px", fontSize: 10 }}>Daftar</Link>
+              <Link href="/login" className={styles.authLink}>{lang === "id" ? "Masuk" : "Login"}</Link>
+              <Link href="/register" className="btn" style={{ padding: "10px 20px", fontSize: 10 }}>
+                {lang === "id" ? "Daftar" : "Sign Up"}
+              </Link>
             </>
           )}
         </div>

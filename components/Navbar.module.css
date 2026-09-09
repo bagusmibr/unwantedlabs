@@ -181,3 +181,35 @@
   .userName { display: none; }
   .logoSub { display: none; }
 }
+
+/* Language toggle */
+.langToggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.langToggle:hover { border-color: rgba(255,255,255,0.35); }
+
+.langActive {
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #fff;
+  font-weight: 600;
+}
+.langInactive {
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  font-weight: 400;
+}
+.langSep {
+  font-size: 8px;
+  color: rgba(255,255,255,0.2);
+}

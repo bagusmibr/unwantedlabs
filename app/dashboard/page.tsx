@@ -181,7 +181,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Studio */}
-              <div className={styles.studioLabel}>DUAL AUDIO Studio</div>
+              <div className={styles.studioLabel}>MP4 Studio</div>
               <h2 className={styles.studioTitle}>MP4 Patch Engine</h2>
               <p className={styles.studioDesc}>
                 Proses berjalan 100% di browser — file tidak pernah meninggalkan perangkatmu.
@@ -238,7 +238,7 @@ export default function DashboardPage() {
                   onClick={runPatch}
                   disabled={!canPatch || (info?.audioTrakCount ?? 0) > 1}
                 >
-                  {processing ? <><div className="spinner" /> Memproses...</> : "Proses DUAL AUDIO Patch"}
+                  {processing ? <><div className="spinner" /> Memproses...</> : "PROSES VIDEO"}
                 </button>
                 {result && (
                   <button className="btn" onClick={downloadResult}>
