@@ -303,24 +303,28 @@ export default function HomePage() {
 
       {/* ── Support Creator ────────────────────────────────────────────────── */}
       <section className="section">
-        <div className="wrap-sm">
+        <div className="wrap">
           <div className={`lbl ${styles.sectionLbl} animate-in`}>{CREATOR.label}</div>
           <div className={`${styles.creatorCard} animate-in`} style={{ animationDelay: "0.1s" }}>
-            <h3 className={styles.creatorHeading}>{CREATOR.heading}</h3>
-            <p className={styles.creatorDesc}>{CREATOR.desc}</p>
-            <div className={styles.socialGrid}>
-              {CREATOR.socials.map((s) => (
-                <a
-                  key={s.platform}
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.socialLink}
-                >
-                  <span className={`lbl ${styles.socialPlatform}`}>{s.platform}</span>
-                  <span className={styles.socialHandle}>{s.handle}</span>
-                </a>
-              ))}
+            <div className={styles.creatorInner}>
+              <div className={styles.creatorLeft}>
+                <h3 className={styles.creatorHeading}>{CREATOR.heading}</h3>
+                <p className={styles.creatorDesc}>{CREATOR.desc}</p>
+              </div>
+              <div className={styles.socialGrid}>
+                {CREATOR.socials.map((s) => (
+                  <a
+                    key={s.platform}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.socialLink}
+                  >
+                    <span className={`lbl ${styles.socialPlatform}`}>{s.platform}</span>
+                    <span className={styles.socialHandle}>{s.handle}</span>
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
         </div>
