@@ -120,7 +120,7 @@ export default function DashboardPage() {
     addLog("Diunduh.", "ok");
   }
 
-  const canPatch = info?.hasAudio && (info?.audioTrakCount ?? 0) <= 1 && libsLoaded && !processing;
+  const canPatch = !!(info?.hasAudio) && libsLoaded && !processing;
 
   return (
     <>
@@ -218,15 +218,29 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* Info chips */}
+              {/* Info chips + reminder */}
               {info && (
-                <div className={styles.infoChips}>
-                  <div className={styles.chip}>{info.width}×{info.height}</div>
-                  <div className={styles.chip}>{info.fps.toFixed(2)} fps</div>
-                  <div className={styles.chip}>{info.hasAudio ? "Audio" : "No Audio"}</div>
-                  <div className={styles.chip}>{(file!.size / 1048576).toFixed(1)} MB</div>
-                  {info.audioTrakCount > 1 && <div className={`${styles.chip} ${styles.chipWarn}`}>{lang === "id" ? "Sudah Di-patch" : "Already Patched"}</div>}
-                </div>
+                <>
+                  <div className={styles.infoChips}>
+                    <div className={styles.chip}>{info.width}×{info.height}</div>
+                    <div className={styles.chip}>{info.fps.toFixed(2)} fps</div>
+                    <div className={styles.chip}>{info.hasAudio ? "Audio" : "No Audio"}</div>
+                    <div className={styles.chip}>{(file!.size / 1048576).toFixed(1)} MB</div>
+                    {info.audioTrakCount > 1 && (
+                      <div className={`${styles.chip} ${styles.chipInfo}`}>
+                        {lang === "id" ? "Sudah Di-patch" : "Already Patched"}
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.reminderBox}>
+                    <span className={styles.reminderIcon}>—</span>
+                    {lang === "id" ? (
+                      <span>Output akan memiliki resolusi, bitrate, dan FPS yang <strong>sama dengan video aslinya</strong>. Proses ini hanya bypass TikTok, bukan upgrade kualitas video.</span>
+                    ) : (
+                      <span>Output will have the <strong>same resolution, bitrate, and FPS</strong> as the original. This only bypasses TikTok, not an upgrade in video quality.</span>
+                    )}
+                  </div>
+                </>
               )}
 
               {/* Terminal */}
@@ -241,9 +255,9 @@ export default function DashboardPage() {
               {/* Actions */}
               <div className={styles.actions}>
                 <button
-                  className={`btn ${!canPatch || (info?.audioTrakCount ?? 0) > 1 ? "btn-ghost" : ""}`}
+                  className={`btn ${!canPatch ? "btn-ghost" : ""}`}
                   onClick={runPatch}
-                  disabled={!canPatch || (info?.audioTrakCount ?? 0) > 1}
+                  disabled={!canPatch}
                 >
                   {processing ? <><div className="spinner" /> {lang === "id" ? "Memproses..." : "Processing..."}</> : (lang === "id" ? "PROSES VIDEO" : "PROCESS VIDEO")}
                 </button>
