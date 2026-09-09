@@ -22,14 +22,26 @@ export default function LoginPage() {
   const [resendMsg, setResendMsg] = useState("");
 
   async function handleSession(token: string, user: { email: string | null; displayName: string | null; photoURL: string | null }) {
-    const res = await fetch("/api/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
-    const data = await res.json();
-    localStorage.setItem("ul_user", JSON.stringify({ email: user.email, name: user.displayName || user.email?.split("@")[0], photo: user.photoURL, isAdmin: data.isAdmin }));
-    router.push("/dashboard");
+    try {
+      const res = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setError("Gagal membuat sesi (server error). Coba beberapa saat lagi.");
+        setGoogleLoading(false);
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem("ul_user", JSON.stringify({ email: user.email, name: user.displayName || user.email?.split("@")[0], photo: user.photoURL, isAdmin: data.isAdmin }));
+      router.push("/dashboard");
+    } catch {
+      setError("Gagal terhubung ke server. Periksa koneksi internet kamu.");
+      setGoogleLoading(false);
+      setLoading(false);
+    }
   }
 
   // Handle redirect result on page load (after Google redirect)
