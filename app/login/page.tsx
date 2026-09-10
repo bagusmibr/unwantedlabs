@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useLang } from "@/lib/lang";
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -13,6 +14,7 @@ import styles from "./login.module.css";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { lang, setLang } = useLang();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,7 +31,11 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!data.ok) {
-        setError(`Server error: ${data.error || "Gagal membuat sesi. Coba lagi."}`);
+        setError(
+          lang === "id"
+            ? `Server error: ${data.error || "Gagal membuat sesi. Coba lagi."}`
+            : `Server error: ${data.error || "Failed to create session. Try again."}`
+        );
         setGoogleLoading(false);
         setLoading(false);
         return;
@@ -42,7 +48,11 @@ export default function LoginPage() {
       }));
       router.push("/dashboard");
     } catch (e: unknown) {
-      setError("Gagal terhubung ke server. Periksa koneksi internet kamu.");
+      setError(
+        lang === "id"
+          ? "Gagal terhubung ke server. Periksa koneksi internet kamu."
+          : "Failed to connect to the server. Check your internet connection."
+      );
       setGoogleLoading(false);
       setLoading(false);
     }
@@ -52,9 +62,9 @@ export default function LoginPage() {
     try {
       const { sendEmailVerification } = await import("firebase/auth");
       await sendEmailVerification(user);
-      setResendMsg("Email verifikasi telah dikirim ulang.");
+      setResendMsg(lang === "id" ? "Email verifikasi telah dikirim ulang." : "Verification email has been resent.");
     } catch {
-      setResendMsg("Gagal mengirim ulang email.");
+      setResendMsg(lang === "id" ? "Gagal mengirim ulang email." : "Failed to resend email.");
     }
   }
 
@@ -67,16 +77,24 @@ export default function LoginPage() {
         resendVerification(cred.user).then(async () => {
           await auth!.signOut();
         });
-        setError("Email belum diverifikasi. Kami telah mengirim ulang link verifikasi ke email Anda.");
+        setError(
+          lang === "id"
+            ? "Email belum diverifikasi. Kami telah mengirim ulang link verifikasi ke email Anda."
+            : "Email not verified. We have resent the verification link to your email."
+        );
         setLoading(false);
         return;
       }
       await handleSession(await cred.user.getIdToken(), cred.user);
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code;
-      setError(code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found"
-        ? "Email atau password salah."
-        : `Login gagal: ${code || "unknown"}`);
+      const isInvalid = code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found";
+      
+      if (isInvalid) {
+        setError(lang === "id" ? "Email atau password salah." : "Incorrect email or password.");
+      } else {
+        setError(lang === "id" ? `Login gagal: ${code || "unknown"}` : `Login failed: ${code || "unknown"}`);
+      }
       setLoading(false);
     }
   }
@@ -91,7 +109,7 @@ export default function LoginPage() {
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code;
       if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
-        setError(`Login Google gagal: ${code || "unknown error"}`);
+        setError(lang === "id" ? `Login Google gagal: ${code || "unknown error"}` : `Google login failed: ${code || "unknown error"}`);
       }
       setGoogleLoading(false);
     }
@@ -99,6 +117,14 @@ export default function LoginPage() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.langWrap}>
+        <button className={styles.langToggle} onClick={() => setLang(lang === "id" ? "en" : "id")}>
+          <span className={lang === "id" ? styles.langActive : styles.langInactive}>ID</span>
+          <span className={styles.langSep}>|</span>
+          <span className={lang === "en" ? styles.langActive : styles.langInactive}>EN</span>
+        </button>
+      </div>
+
       <div className={styles.card}>
         <div className={styles.logoWrap}>
           <Image src="/logo_small.png" alt="UNWANTED LABS" width={160} height={28} />
@@ -106,7 +132,7 @@ export default function LoginPage() {
 
         <div className={styles.heading}>
           <div className={styles.title}>UNWANTED LABS — Panel</div>
-          <div className={styles.sub}>Masuk</div>
+          <div className={styles.sub}>{lang === "id" ? "Masuk" : "Login"}</div>
         </div>
 
         <button className={`btn ${styles.googleBtn}`} onClick={onGoogle} disabled={googleLoading}>
@@ -118,10 +144,10 @@ export default function LoginPage() {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
           )}
-          {googleLoading ? "Menghubungkan..." : "Lanjutkan dengan Google"}
+          {googleLoading ? (lang === "id" ? "Menghubungkan..." : "Connecting...") : (lang === "id" ? "Lanjutkan dengan Google" : "Continue with Google")}
         </button>
 
-        <div className={styles.divider}>atau</div>
+        <div className={styles.divider}>{lang === "id" ? "atau" : "or"}</div>
 
         <form onSubmit={onSubmit} className={styles.form}>
           <div className="input-group">
@@ -135,12 +161,12 @@ export default function LoginPage() {
           {resendMsg && <div style={{ color: "#4caf50", fontSize: 13, marginBottom: 12 }}>{resendMsg}</div>}
           {error && <div className={styles.error}>{error}</div>}
           <button type="submit" className="btn" style={{ width: "100%", padding: 14, marginTop: 4 }} disabled={loading}>
-            {loading ? <div className="spinner" /> : "Masuk"}
+            {loading ? <div className="spinner" /> : (lang === "id" ? "Masuk" : "Login")}
           </button>
         </form>
 
         <p className={styles.footer}>
-          Belum punya akun? <Link href="/register">Daftar</Link>
+          {lang === "id" ? "Belum punya akun?" : "Don't have an account?"} <Link href="/register">{lang === "id" ? "Daftar" : "Sign Up"}</Link>
         </p>
       </div>
     </div>
