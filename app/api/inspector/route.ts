@@ -160,6 +160,15 @@ export async function GET(req: NextRequest) {
       { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(8000) }
     ).then(r => r.json()).catch(() => null);
 
+    // ── Creator stats: tikwm user info (might work on Vercel IPs) ──────────
+    const authorIdFromUrl = url.match(/@([^/]+)/)?.[1] ?? null;
+    const creatorStatsPromise = authorIdFromUrl
+      ? fetch(
+          `https://www.tikwm.com/api/user/info/?user_id=@${authorIdFromUrl}&web=1`,
+          { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(6000) }
+        ).then(r => r.json()).catch(() => null)
+      : Promise.resolve(null);
+
     const oembedPromise = fetch(
       `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`,
       { headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" }, next: { revalidate: 60 } }
@@ -183,11 +192,12 @@ export async function GET(req: NextRequest) {
     }).catch(() => null);
 
     // ── Wait for everything ───────────────────────────────────────────────
-    const [rawVidRes, tkRawRes, oDataRes, fps] = await Promise.all([
+    const [rawVidRes, tkRawRes, oDataRes, fps, creatorRaw] = await Promise.all([
       scraperPromise.catch(() => null),
       tikwmPromise,
       oembedPromise,
       fpsPromise,
+      creatorStatsPromise,
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -196,6 +206,10 @@ export async function GET(req: NextRequest) {
     const tkData: any = tkRawRes?.code === 0 && tkRawRes?.data ? tkRawRes.data : null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const oData: any = oDataRes;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const creatorData: any = creatorRaw?.code === 0 && creatorRaw?.data?.user_info
+      ? creatorRaw.data.user_info
+      : null;
 
     if (!oData && !rawVid && !tkData) {
       throw new Error("Gagal mengambil data dari semua sumber.");
@@ -220,6 +234,16 @@ export async function GET(req: NextRequest) {
     // Dual audio = 120fps TikTok processing tier ("Dapur Kita" trick)
     const hasDualAudio: boolean      = !!(video?.bit_rate_audio);
     const tiktokTier:   number | null = hasDualAudio ? 120 : null;
+
+    // ── Creator stats ──────────────────────────────────────────────────────
+    const authorObj     = rawVid?.author ?? {};
+    const isVerified    = (creatorData?.verification_type ?? authorObj.verification_type) === 1;
+    const creatorBio    = authorObj.signature || null;
+    const creatorRegion = authorObj.region    || rawVid?.region || null;
+    const followerCount: number | null = creatorData?.follower_count ?? null;
+    const followingCount: number | null = creatorData?.following_count ?? null;
+    const videoCount: number | null    = creatorData?.aweme_count ?? null;
+    const totalLikes: number | null    = creatorData?.total_favorited ?? null;
 
     const fileSize:    number | null = br?.play_addr?.data_size || tkData?.hd_size || tkData?.size || null;
     let bitrateKbps:   number | null = br?.bit_rate ? Math.round(br.bit_rate / 1000) : null;
@@ -288,6 +312,16 @@ export async function GET(req: NextRequest) {
         // Engagement
         views, likes, comments, favorites, shares, downloads,
         engagementRate, erBreakdown,  // erBreakdown is null when not valid
+        // Creator quick stats
+        creatorStats: {
+          isVerified,
+          bio: creatorBio,
+          region: creatorRegion,
+          followerCount,   // null when tikwm is unavailable
+          followingCount,  // null when tikwm is unavailable
+          videoCount,      // null when tikwm is unavailable
+          totalLikes,      // null when tikwm is unavailable
+        },
       },
     });
   } catch (e: unknown) {

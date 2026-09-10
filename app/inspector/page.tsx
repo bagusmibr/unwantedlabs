@@ -24,6 +24,15 @@ interface VideoMeta {
     likesRate: number; commentsRate: number; sharesRate: number;
     favoritesRate: number; downloadsRate: number;
   } | null;
+  creatorStats: {
+    isVerified: boolean;
+    bio: string | null;
+    region: string | null;
+    followerCount: number | null;
+    followingCount: number | null;
+    videoCount: number | null;
+    totalLikes: number | null;
+  };
 }
 
 // ── SVG Icon Components ────────────────────────────────────────────────────
@@ -336,6 +345,7 @@ export default function InspectorPage() {
                   {meta.bitrateKbps && <SpecRow label="Bitrate" value={`${meta.bitrateKbps.toLocaleString()} kbps`} />}
                   {meta.codecType   && <SpecRow label="Codec" value={meta.codecType} />}
 
+                  {/* Streaming Quality */}
                   {(meta.browserQ || meta.phoneQ) && (
                     <>
                       <div className={styles.cardSectionTitle} style={{ marginTop: 20 }}>
@@ -344,6 +354,63 @@ export default function InspectorPage() {
                       {meta.browserQ && <SpecRow label="Browser" value={meta.browserQ} />}
                       {meta.phoneQ   && <SpecRow label="Phone"   value={meta.phoneQ} />}
                     </>
+                  )}
+
+                  {/* Creator Quick Stats */}
+                  <div className={styles.cardSectionTitle} style={{ marginTop: 20 }}>
+                    <IconEye /> Creator
+                  </div>
+                  {/* Verified badge + bio */}
+                  {meta.creatorStats.isVerified && (
+                    <div className={styles.verifiedBadge}>
+                      <svg viewBox="0 0 24 24" width={10} height={10} fill="#3b82f6"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#3b82f6" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      Verified
+                    </div>
+                  )}
+                  {meta.creatorStats.bio && (
+                    <div className={styles.creatorBio}>&ldquo;{meta.creatorStats.bio.slice(0, 80)}{meta.creatorStats.bio.length > 80 ? "…" : ""}&rdquo;</div>
+                  )}
+                  {/* Stat grid */}
+                  <div className={styles.creatorGrid}>
+                    <div className={styles.creatorStat}>
+                      <span className={styles.creatorStatVal}>
+                        {meta.creatorStats.followerCount !== null ? fmtNum(meta.creatorStats.followerCount) : "—"}
+                      </span>
+                      <span className={styles.creatorStatLabel}>{id ? "Pengikut" : "Followers"}</span>
+                    </div>
+                    <div className={styles.creatorStat}>
+                      <span className={styles.creatorStatVal}>
+                        {meta.creatorStats.followingCount !== null ? fmtNum(meta.creatorStats.followingCount) : "—"}
+                      </span>
+                      <span className={styles.creatorStatLabel}>{id ? "Mengikuti" : "Following"}</span>
+                    </div>
+                    <div className={styles.creatorStat}>
+                      <span className={styles.creatorStatVal}>
+                        {meta.creatorStats.videoCount !== null ? fmtNum(meta.creatorStats.videoCount) : "—"}
+                      </span>
+                      <span className={styles.creatorStatLabel}>{id ? "Video" : "Videos"}</span>
+                    </div>
+                    <div className={styles.creatorStat}>
+                      <span className={styles.creatorStatVal}>
+                        {meta.creatorStats.totalLikes !== null ? fmtNum(meta.creatorStats.totalLikes) : "—"}
+                      </span>
+                      <span className={styles.creatorStatLabel}>{id ? "Total Suka" : "Total Likes"}</span>
+                    </div>
+                  </div>
+                  {meta.creatorStats.region && (
+                    <div className={styles.creatorRegion}>
+                      <IconCalendar />
+                      <span>{meta.creatorStats.region}</span>
+                    </div>
+                  )}
+                  {meta.author_id && (
+                    <a
+                      href={`https://www.tiktok.com/@${meta.author_id}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className={styles.creatorLink}
+                    >
+                      <IconLink /> @{meta.author_id}
+                    </a>
                   )}
                 </div>
 

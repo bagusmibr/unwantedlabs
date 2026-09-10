@@ -488,6 +488,77 @@
 }
 
 
+/* ── Creator Quick Stats ─────────────────────────────────────────────────── */
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #3b82f6;
+  border: 1px solid rgba(59,130,246,0.25);
+  padding: 3px 8px;
+  border-radius: 2px;
+  margin-bottom: 10px;
+}
+.creatorBio {
+  font-size: 10px;
+  color: rgba(255,255,255,0.28);
+  font-style: italic;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  border-left: 2px solid rgba(255,255,255,0.06);
+  padding-left: 8px;
+}
+.creatorGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.creatorStat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+.creatorStatVal {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.75);
+  font-variant-numeric: tabular-nums;
+}
+.creatorStatLabel {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+}
+.creatorRegion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+  margin-top: 4px;
+}
+.creatorLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.25);
+  text-decoration: none;
+  font-family: ui-monospace, 'SF Mono', monospace;
+  transition: color 0.2s;
+}
+.creatorLink:hover { color: rgba(255,255,255,0.6); }
+
 /* ── Empty State ─────────────────────────────────────────────────────────── */
 .emptyState {
   text-align: center;
