@@ -361,6 +361,28 @@
   font-weight: 600;
   font-size: 14px;
 }
+.specValueGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.specBadge {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(245, 158, 11, 0.7);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-family: ui-monospace, 'SF Mono', monospace;
+}
+.specMuted {
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+  font-family: ui-monospace, 'SF Mono', monospace;
+}
 
 /* ── Engagement Card ─────────────────────────────────────────────────────── */
 .engGrid {

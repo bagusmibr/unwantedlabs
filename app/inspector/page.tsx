@@ -10,7 +10,10 @@ interface VideoMeta {
   author_avatar: string | null; thumbnail_url: string;
   thumbnail_width: number; thumbnail_height: number;
   provider_name: string; width: number | null; height: number | null;
-  duration: number | null; fps: number | null; bitrateKbps: number | null;
+  duration: number | null; fps: number | null;
+  tiktokTier: number | null;  // TikTok processing tier (120 for dual-audio trick)
+  hasDualAudio: boolean;      // true = second audio track detected
+  bitrateKbps: number | null;
   fileSize: number | null; codecType: string | null; definition: string | null;
   videoId: string | null; embedUrl: string | null; region: string | null;
   createTime: number | null; browserQ: string | null; phoneQ: string | null;
@@ -303,7 +306,27 @@ export default function InspectorPage() {
                     <IconVideo /> {id ? "Spesifikasi Video" : "Video specifications"}
                   </div>
                   <SpecRow label={id ? "Resolusi" : "Resolution"} value={meta.width && meta.height ? `${meta.width}×${meta.height}` : "—"} />
-                  <SpecRow label="Framerate" value={meta.fps ? `${meta.fps} FPS` : "—"} highlight={!!meta.fps} />
+                  {/* Framerate row — shows TikTok tier if dual audio detected */}
+                  <div className={styles.specRow}>
+                    <span className={styles.specLabel}>Framerate</span>
+                    <span className={styles.specValueGroup}>
+                      {meta.tiktokTier ? (
+                        // TikTok processed via 120fps tier (dual audio trick)
+                        <>
+                          <span className={styles.specHighlight}>{meta.tiktokTier} FPS</span>
+                          <span className={styles.specBadge}>TikTok Tier</span>
+                          {meta.fps && meta.fps !== meta.tiktokTier && (
+                            <span className={styles.specMuted}>({meta.fps} physical)</span>
+                          )}
+                        </>
+                      ) : (
+                        // No dual audio — show physical fps from stts
+                        <span className={meta.fps ? styles.specHighlight : ""}>
+                          {meta.fps ? `${meta.fps} FPS` : "—"}
+                        </span>
+                      )}
+                    </span>
+                  </div>
                   <SpecRow label={id ? "Ukuran File" : "File size"} value={fmtSize(meta.fileSize)} />
                   <SpecRow label={id ? "Durasi" : "Duration"} value={fmtDuration(meta.duration)} />
                   {meta.bitrateKbps && <SpecRow label="Bitrate" value={`${meta.bitrateKbps.toLocaleString()} kbps`} />}

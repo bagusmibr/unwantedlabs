@@ -229,6 +229,11 @@ export async function GET(req: NextRequest) {
     const ratio:       string | null = video?.ratio         || null;
     const codecType:   string | null = video?.is_bytevc1 === 1 ? "h265" : (br ? "h264" : null);
 
+    // Dual audio track = TikTok 120fps processing tier ("Dapur Kita" trick)
+    // bit_rate_audio is non-null ONLY when a second audio track exists
+    const hasDualAudio: boolean = !!(video?.bit_rate_audio);
+    const tiktokTier: number | null = hasDualAudio ? 120 : null;
+
     const fileSize: number | null = br?.play_addr?.data_size || tkData?.hd_size || tkData?.size || null;
     let bitrateKbps: number | null = br?.bit_rate ? Math.round(br.bit_rate / 1000) : null;
     if (!bitrateKbps && fileSize && duration && duration > 0) {
@@ -270,7 +275,10 @@ export async function GET(req: NextRequest) {
         thumbnail_height: oData?.thumbnail_height                  || null,
         provider_name: "TikTok",
         // Video specs
-        width, height, duration, fps,
+        width, height, duration,
+        fps,          // physical FPS from MP4 stts
+        tiktokTier,   // TikTok processing tier (120 if dual audio track detected)
+        hasDualAudio, // true = video has the 120fps dual-audio trick
         bitrateKbps, fileSize, codecType,
         definition: ratio,
         region, createTime, videoId,
