@@ -20,6 +20,10 @@ interface VideoMeta {
   views: number | null; likes: number | null; comments: number | null;
   favorites: number | null; shares: number | null; downloads: number | null;
   engagementRate: number | null;
+  erBreakdown: {
+    likesRate: number; commentsRate: number; sharesRate: number;
+    favoritesRate: number; downloadsRate: number;
+  } | null;
 }
 
 // ── SVG Icon Components ────────────────────────────────────────────────────
@@ -356,7 +360,8 @@ export default function InspectorPage() {
                     <EngItem icon={<IconShare />}     label="Shares"                         value={fmtNum(meta.shares)} />
                     <EngItem icon={<IconDownload />}  label="Downloads"                      value={fmtNum(meta.downloads)} />
                   </div>
-                  {meta.engagementRate !== null && (
+                  {/* Engagement Rate — only shown when erBreakdown is valid */}
+                  {meta.erBreakdown && meta.engagementRate !== null && (
                     <div className={styles.engRate}>
                       <div className={styles.engRateRow}>
                         <span className={styles.engRateLabel}>Engagement rate</span>
@@ -364,6 +369,36 @@ export default function InspectorPage() {
                       </div>
                       <div className={styles.engBar}>
                         <div className={styles.engBarFill} style={{ width: `${Math.min(meta.engagementRate * 10, 100)}%` }} />
+                      </div>
+
+                      {/* Per-metric breakdown */}
+                      <div className={styles.erBreakdown}>
+                        {[
+                          { label: "Likes",     rate: meta.erBreakdown.likesRate,     icon: <IconHeart /> },
+                          { label: "Comments",  rate: meta.erBreakdown.commentsRate,  icon: <IconComment /> },
+                          { label: "Shares",    rate: meta.erBreakdown.sharesRate,    icon: <IconShare /> },
+                          { label: "Favorites", rate: meta.erBreakdown.favoritesRate, icon: <IconBookmark /> },
+                          { label: "Downloads", rate: meta.erBreakdown.downloadsRate, icon: <IconDownload /> },
+                        ].map(({ label, rate, icon }) => (
+                          <div key={label} className={styles.erRow}>
+                            <span className={styles.erRowIcon}>{icon}</span>
+                            <span className={styles.erRowLabel}>{label}</span>
+                            <div className={styles.erRowBar}>
+                              <div
+                                className={styles.erRowBarFill}
+                                style={{ width: `${Math.min(rate * 20, 100)}%` }}
+                              />
+                            </div>
+                            <span className={styles.erRowRate}>
+                              {rate > 0 ? `${rate}%` : "—"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Formula note */}
+                      <div className={styles.erFormula}>
+                        ER = (Likes + Comments + Shares + Favorites) ÷ Views × 100
                       </div>
                     </div>
                   )}

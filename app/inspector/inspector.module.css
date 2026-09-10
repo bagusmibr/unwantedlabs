@@ -434,6 +434,60 @@
   transition: width 1s ease;
 }
 
+/* ── ER Breakdown Table ─────────────────────────────────────────────────── */
+.erBreakdown {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.erRow {
+  display: grid;
+  grid-template-columns: 16px 72px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+}
+.erRowIcon {
+  color: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+}
+.erRowLabel {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  font-family: ui-monospace, 'SF Mono', monospace;
+  letter-spacing: 0.04em;
+}
+.erRowBar {
+  height: 2px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.erRowBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b80, #f59e0b);
+  border-radius: 1px;
+  transition: width 0.8s ease;
+}
+.erRowRate {
+  font-size: 10px;
+  color: rgba(245,158,11,0.7);
+  text-align: right;
+  font-family: ui-monospace, 'SF Mono', monospace;
+}
+.erFormula {
+  margin-top: 12px;
+  font-size: 9px;
+  color: rgba(255,255,255,0.12);
+  font-family: ui-monospace, 'SF Mono', monospace;
+  letter-spacing: 0.04em;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  padding-top: 10px;
+  line-height: 1.5;
+}
+
+
 /* ── Empty State ─────────────────────────────────────────────────────────── */
 .emptyState {
   text-align: center;

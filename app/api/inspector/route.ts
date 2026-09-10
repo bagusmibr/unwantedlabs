@@ -243,10 +243,23 @@ export async function GET(req: NextRequest) {
     const shares    = stats.share_count   ?? tkData?.share_count   ?? null;
     const favorites = stats.collect_count ?? tkData?.collect_count ?? null;
     const downloads = stats.download_count ?? null;
+
+    // ER is only valid when: views > 0 AND at least one interaction metric exists
+    const hasInteractions = (likes ?? 0) + (comments ?? 0) + (shares ?? 0) + (favorites ?? 0) > 0;
+    const erValid = !!(views && views > 0 && hasInteractions);
+
     let engagementRate: number | null = null;
-    if (views && views > 0 && likes !== null) {
-      const interactions = (likes ?? 0) + (comments ?? 0) + (shares ?? 0) + (favorites ?? 0);
-      engagementRate = Math.round((interactions / views) * 10000) / 100;
+    let erBreakdown: { likesRate: number; commentsRate: number; sharesRate: number; favoritesRate: number; downloadsRate: number } | null = null;
+
+    if (erValid && views) {
+      const pct = (n: number | null) => Math.round(((n ?? 0) / views!) * 10000) / 100;
+      const likesRate     = pct(likes);
+      const commentsRate  = pct(comments);
+      const sharesRate    = pct(shares);
+      const favoritesRate = pct(favorites);
+      const downloadsRate = pct(downloads);
+      engagementRate = Math.round((likesRate + commentsRate + sharesRate + favoritesRate) * 100) / 100;
+      erBreakdown = { likesRate, commentsRate, sharesRate, favoritesRate, downloadsRate };
     }
 
     return NextResponse.json({
@@ -273,7 +286,8 @@ export async function GET(req: NextRequest) {
         // Streaming quality
         browserQ, phoneQ,
         // Engagement
-        views, likes, comments, favorites, shares, downloads, engagementRate,
+        views, likes, comments, favorites, shares, downloads,
+        engagementRate, erBreakdown,  // erBreakdown is null when not valid
       },
     });
   } catch (e: unknown) {
