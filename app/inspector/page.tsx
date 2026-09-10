@@ -19,15 +19,37 @@ interface VideoMeta {
   engagementRate: number | null;
 }
 
+// ── SVG Icon Components ────────────────────────────────────────────────────
+const s = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+
+const IconRuler    = () => <svg {...s}><path d="M2 12h20M2 6l4 4M2 18l4-4M22 6l-4 4M22 18l-4-4"/></svg>;
+const IconPlay     = () => <svg {...s}><polygon points="5,3 19,12 5,21"/></svg>;
+const IconBarChart = () => <svg {...s}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+const IconVideo    = () => <svg {...s}><rect x="2" y="6" width="15" height="12" rx="2"/><path d="M17 8l5-2v12l-5-2"/></svg>;
+const IconSignal   = () => <svg {...s}><path d="M2 12h2M6 8v8M10 5v14M14 8v8M18 2v20M22 8v8"/></svg>;
+const IconEye      = () => <svg {...s}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+const IconHeart    = () => <svg {...s}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
+const IconComment  = () => <svg {...s}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
+const IconBookmark = () => <svg {...s}><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>;
+const IconShare    = () => <svg {...s}><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>;
+const IconDownload = () => <svg {...s}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+const IconClock    = () => <svg {...s}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+const IconCalendar = () => <svg {...s}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+const IconSearch   = () => <svg {...s}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+const IconCheck    = () => <svg {...s} stroke="#27c93f"><polyline points="20 6 9 17 4 12"/></svg>;
+const IconX        = () => <svg {...s} stroke="#ff5f56"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+const IconSend     = () => <svg {...s}><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
+const IconLink     = () => <svg {...s}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 function fmtSize(b: number | null): string {
   if (!b) return "—";
   return b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : (b / 1024).toFixed(0) + " KB";
 }
-function fmtDuration(s: number | null): string {
-  if (!s) return "—";
-  const m = Math.floor(s / 60); const sec = s % 60;
-  return `${m}:${sec.toString().padStart(2, "0")}`;
+function fmtDuration(sec: number | null): string {
+  if (!sec) return "—";
+  const m = Math.floor(sec / 60); const s2 = sec % 60;
+  return `${m}:${s2.toString().padStart(2, "0")}`;
 }
 function fmtNum(n: number | null): string {
   if (n === null || n === undefined) return "—";
@@ -47,6 +69,30 @@ function fmtDate(ts: number | null): string {
   return new Date(ts * 1000).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
+// ── Reusable spec row ──────────────────────────────────────────────────────
+function SpecRow({ label, value, highlight }: { label: string; value: React.ReactNode; highlight?: boolean }) {
+  return (
+    <div className={styles.specRow}>
+      <span className={styles.specLabel}>{label}</span>
+      <span className={`${styles.specValue} ${highlight ? styles.specHighlight : ""}`}>{value}</span>
+    </div>
+  );
+}
+
+// ── Engagement item ────────────────────────────────────────────────────────
+function EngItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className={styles.engItem}>
+      <span className={styles.engIcon}>{icon}</span>
+      <div className={styles.engLabel}>{label}</div>
+      <div className={styles.engValue}>{value}</div>
+    </div>
+  );
+}
+
+// ── Log line types ─────────────────────────────────────────────────────────
+type LogEntry = { type: "info" | "success" | "error" | "data"; text: string };
+
 export default function InspectorPage() {
   const { lang } = useLang();
   const id = lang === "id";
@@ -54,17 +100,14 @@ export default function InspectorPage() {
   const [loading, setLoading] = useState(false);
   const [meta, setMeta] = useState<VideoMeta | null>(null);
   const [error, setError] = useState("");
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll log
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [logs]);
 
-  function pushLog(line: string) {
-    setLogs(prev => [...prev, line]);
-  }
+  function pushLog(entry: LogEntry) { setLogs(prev => [...prev, entry]); }
 
   async function inspect() {
     setError(""); setMeta(null); setLogs([]);
@@ -75,24 +118,23 @@ export default function InspectorPage() {
     const vid = extractVideoId(url);
     setLoading(true);
 
-    // Animated log steps
-    pushLog("🔍 " + (id ? "Mengambil data video..." : "Fetching video data..."));
+    pushLog({ type: "info",    text: id ? "Mengambil data video..." : "Fetching video data..." });
     await new Promise(r => setTimeout(r, 300));
-    if (vid) pushLog(`✓ Video ID terdeteksi: ${vid}`);
+    if (vid) pushLog({ type: "data",    text: `Data fetched. ID: ${vid}` });
     await new Promise(r => setTimeout(r, 200));
-    pushLog("📡 Source: TikWM + TikTok Mobile API");
+    pushLog({ type: "data",    text: "Source: TikWM + TikTok Mobile API" });
     await new Promise(r => setTimeout(r, 400));
-    pushLog("📊 " + (id ? "Mendeteksi kualitas & framerate..." : "Detecting quality & framerate..."));
+    pushLog({ type: "info",    text: id ? "Mendeteksi kualitas & framerate..." : "Detecting quality & framerate..." });
 
     try {
       const res = await fetch(`/api/inspector?url=${encodeURIComponent(url)}`);
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Gagal");
       await new Promise(r => setTimeout(r, 300));
-      pushLog("✓ " + (id ? "Analisis selesai!" : "Analysis complete!"));
+      pushLog({ type: "success", text: id ? "Analisis selesai!" : "Analysis complete!" });
       setMeta(data.data);
     } catch (e: unknown) {
-      pushLog("✗ Error: " + ((e as Error).message || "Gagal"));
+      pushLog({ type: "error",   text: "Error: " + ((e as Error).message || "Gagal") });
       setError((e as Error).message || (id ? "Gagal mengambil metadata." : "Failed to fetch metadata."));
     }
     setLoading(false);
@@ -105,7 +147,8 @@ export default function InspectorPage() {
       <Navbar />
       <main className={styles.main}>
         <div className="wrap-md">
-          {/* Header */}
+
+          {/* ── Header ─────────────────────────────────────────────────── */}
           <div className={`${styles.header} animate-in`}>
             <div className={styles.headerBadge}>
               <span>{id ? "Gratis" : "Free"}</span>
@@ -116,24 +159,24 @@ export default function InspectorPage() {
             <p className={styles.sub}>{id ? "Analisis metadata video TikTok" : "Analyze TikTok video metadata"}</p>
           </div>
 
-          {/* What you get */}
+          {/* ── Feature Row ────────────────────────────────────────────── */}
           <div className={`${styles.featureRow} animate-in`} style={{ animationDelay: "0.05s" }}>
             <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>📐</span>
+              <span className={styles.featureIcon}><IconRuler /></span>
               <div>
                 <div className={styles.featureTitle}>{id ? "Spesifikasi Asli" : "True specifications"}</div>
                 <div className={styles.featureDesc}>{id ? "Resolusi, framerate, ukuran & durasi persis seperti yang TikTok sajikan." : "Resolution, framerate, size and duration exactly as TikTok serves them."}</div>
               </div>
             </div>
             <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>⚡</span>
+              <span className={styles.featureIcon}><IconPlay /></span>
               <div>
                 <div className={styles.featureTitle}>{id ? "Kualitas Streaming" : "Streaming quality"}</div>
                 <div className={styles.featureDesc}>{id ? "Kualitas yang diterima browser dan HP dari TikTok." : "Quality served to browsers and phones by TikTok."}</div>
               </div>
             </div>
             <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>📊</span>
+              <span className={styles.featureIcon}><IconBarChart /></span>
               <div>
                 <div className={styles.featureTitle}>Engagement</div>
                 <div className={styles.featureDesc}>{id ? "Views, likes, komentar, share, dan engagement rate." : "Views, likes, comments, shares, and the engagement rate."}</div>
@@ -141,9 +184,10 @@ export default function InspectorPage() {
             </div>
           </div>
 
-          {/* Search */}
+          {/* ── Search ─────────────────────────────────────────────────── */}
           <div className={`${styles.searchCard} animate-in`} style={{ animationDelay: "0.1s" }}>
             <div className={styles.searchRow}>
+              <span className={styles.searchIcon}><IconSearch /></span>
               <input
                 className={`input ${styles.searchInput}`}
                 type="url"
@@ -162,10 +206,9 @@ export default function InspectorPage() {
             </p>
           </div>
 
-          {/* Processing Log */}
+          {/* ── Processing Log ──────────────────────────────────────────── */}
           {logs.length > 0 && (
             <div className={`${styles.logCard} animate-in`}>
-              {/* macOS traffic lights */}
               <div className={styles.logHeader}>
                 <div className={styles.trafficLights}>
                   <span className={`${styles.dot} ${styles.dotRed}`} />
@@ -175,14 +218,20 @@ export default function InspectorPage() {
                 <span className={styles.logTitle}>Processing log</span>
               </div>
               <div className={styles.logBody} ref={logRef}>
-                {logs.map((line, i) => (
-                  <div key={i} className={styles.logLine}>
-                    <span className={styles.logPrompt}>&gt;</span> {line}
+                {logs.map((entry, i) => (
+                  <div key={i} className={`${styles.logLine} ${styles["logLine_" + entry.type]}`}>
+                    <span className={styles.logIconWrap}>
+                      {entry.type === "success" && <IconCheck />}
+                      {entry.type === "error"   && <IconX />}
+                      {entry.type === "info"    && <IconSearch />}
+                      {entry.type === "data"    && <IconLink />}
+                    </span>
+                    <span>{entry.text}</span>
                   </div>
                 ))}
                 {loading && (
                   <div className={styles.logLine}>
-                    <span className={styles.logPrompt}>&gt;</span>
+                    <span className={styles.logIconWrap} style={{ opacity: 0.2 }}><IconSend /></span>
                     <span className={styles.logCursor}>▌</span>
                   </div>
                 )}
@@ -190,22 +239,17 @@ export default function InspectorPage() {
             </div>
           )}
 
-          {/* Result */}
+          {/* ── Result ─────────────────────────────────────────────────── */}
           {meta && (
             <>
               {/* Video Info Card */}
               <div className={`${styles.videoCard} animate-in`}>
                 <div className={styles.videoCardLeft}>
-                  {meta.author_avatar || meta.thumbnail_url ? (
+                  {meta.thumbnail_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={meta.thumbnail_url}
-                      alt="thumb"
-                      className={styles.videoThumb}
-                      referrerPolicy="no-referrer"
-                    />
+                    <img src={meta.thumbnail_url} alt="thumb" className={styles.videoThumb} referrerPolicy="no-referrer" />
                   ) : (
-                    <div className={styles.videoThumbPlaceholder}>▶</div>
+                    <div className={styles.videoThumbPlaceholder}><IconVideo /></div>
                   )}
                 </div>
                 <div className={styles.videoCardInfo}>
@@ -220,16 +264,24 @@ export default function InspectorPage() {
                   <p className={styles.videoDesc}>{meta.title}</p>
                   <div className={styles.videoMeta}>
                     {meta.duration && (
-                      <span>🕐 {fmtDuration(meta.duration)}</span>
+                      <span className={styles.videoMetaItem}>
+                        <IconClock /> {fmtDuration(meta.duration)}
+                      </span>
                     )}
                     {meta.createTime && (
-                      <span>📅 {fmtDate(meta.createTime)}</span>
+                      <span className={styles.videoMetaItem}>
+                        <IconCalendar /> {fmtDate(meta.createTime)}
+                      </span>
                     )}
                   </div>
                   {meta.embedUrl && (
-                    <a href={`https://www.tiktok.com/@${meta.author_id || "_"}/video/${videoId}`}
-                       target="_blank" rel="noopener noreferrer" className={styles.watchLink}>
-                      {id ? "Tonton di TikTok ↗" : "Watch on TikTok ↗"}
+                    <a
+                      href={`https://www.tiktok.com/@${meta.author_id || "_"}/video/${videoId}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className={styles.watchLink}
+                    >
+                      <IconLink />
+                      {id ? "Tonton di TikTok" : "Watch on TikTok"}
                     </a>
                   )}
                 </div>
@@ -237,68 +289,33 @@ export default function InspectorPage() {
                   <div className={styles.badgeTitle}>UNWANTED LABS</div>
                   <div className={styles.badgeSub}>
                     <span className={styles.badgeDot} />
-                    {id ? "INSPECTOR" : "INSPECTOR"}
+                    INSPECTOR
                   </div>
                 </div>
               </div>
 
-              {/* Specs + Engagement */}
+              {/* Specs + Engagement Grid */}
               <div className={`${styles.bottomGrid} animate-in`}>
+
                 {/* Left: Video Specs */}
                 <div className={styles.specsCard}>
                   <div className={styles.cardSectionTitle}>
-                    <span>📹</span> {id ? "Spesifikasi Video" : "Video specifications"}
+                    <IconVideo /> {id ? "Spesifikasi Video" : "Video specifications"}
                   </div>
-                  <div className={styles.specRow}>
-                    <span className={styles.specLabel}>{id ? "Resolusi" : "Resolution"}</span>
-                    <span className={styles.specValue}>
-                      {meta.width && meta.height ? `${meta.width}x${meta.height}` : "—"}
-                    </span>
-                  </div>
-                  <div className={styles.specRow}>
-                    <span className={styles.specLabel}>Framerate</span>
-                    <span className={`${styles.specValue} ${meta.fps ? styles.specHighlight : ""}`}>
-                      {meta.fps ? `${meta.fps} FPS` : "—"}
-                    </span>
-                  </div>
-                  <div className={styles.specRow}>
-                    <span className={styles.specLabel}>{id ? "Ukuran File" : "File size"}</span>
-                    <span className={styles.specValue}>{fmtSize(meta.fileSize)}</span>
-                  </div>
-                  <div className={styles.specRow}>
-                    <span className={styles.specLabel}>{id ? "Durasi" : "Duration"}</span>
-                    <span className={styles.specValue}>{fmtDuration(meta.duration)}</span>
-                  </div>
-                  {meta.bitrateKbps && (
-                    <div className={styles.specRow}>
-                      <span className={styles.specLabel}>Bitrate</span>
-                      <span className={styles.specValue}>{meta.bitrateKbps.toLocaleString()} kbps</span>
-                    </div>
-                  )}
-                  {meta.codecType && (
-                    <div className={styles.specRow}>
-                      <span className={styles.specLabel}>Codec</span>
-                      <span className={styles.specValue}>{meta.codecType}</span>
-                    </div>
-                  )}
+                  <SpecRow label={id ? "Resolusi" : "Resolution"} value={meta.width && meta.height ? `${meta.width}×${meta.height}` : "—"} />
+                  <SpecRow label="Framerate" value={meta.fps ? `${meta.fps} FPS` : "—"} highlight={!!meta.fps} />
+                  <SpecRow label={id ? "Ukuran File" : "File size"} value={fmtSize(meta.fileSize)} />
+                  <SpecRow label={id ? "Durasi" : "Duration"} value={fmtDuration(meta.duration)} />
+                  {meta.bitrateKbps && <SpecRow label="Bitrate" value={`${meta.bitrateKbps.toLocaleString()} kbps`} />}
+                  {meta.codecType   && <SpecRow label="Codec" value={meta.codecType} />}
 
                   {(meta.browserQ || meta.phoneQ) && (
                     <>
                       <div className={styles.cardSectionTitle} style={{ marginTop: 20 }}>
-                        <span>📡</span> {id ? "Kualitas Streaming" : "Streaming quality"}
+                        <IconSignal /> {id ? "Kualitas Streaming" : "Streaming quality"}
                       </div>
-                      {meta.browserQ && (
-                        <div className={styles.specRow}>
-                          <span className={styles.specLabel}>Browser</span>
-                          <span className={styles.specValue}>{meta.browserQ}</span>
-                        </div>
-                      )}
-                      {meta.phoneQ && (
-                        <div className={styles.specRow}>
-                          <span className={styles.specLabel}>Phone</span>
-                          <span className={styles.specValue}>{meta.phoneQ}</span>
-                        </div>
-                      )}
+                      {meta.browserQ && <SpecRow label="Browser" value={meta.browserQ} />}
+                      {meta.phoneQ   && <SpecRow label="Phone"   value={meta.phoneQ} />}
                     </>
                   )}
                 </div>
@@ -306,39 +323,15 @@ export default function InspectorPage() {
                 {/* Right: Engagement */}
                 <div className={styles.engCard}>
                   <div className={styles.cardSectionTitle}>
-                    <span>📈</span> Engagement
+                    <IconBarChart /> Engagement
                   </div>
                   <div className={styles.engGrid}>
-                    <div className={styles.engItem}>
-                      <span className={styles.engIcon}>👁️</span>
-                      <div className={styles.engLabel}>Views</div>
-                      <div className={styles.engValue}>{fmtNum(meta.views)}</div>
-                    </div>
-                    <div className={styles.engItem}>
-                      <span className={styles.engIcon}>❤️</span>
-                      <div className={styles.engLabel}>Likes</div>
-                      <div className={styles.engValue}>{fmtNum(meta.likes)}</div>
-                    </div>
-                    <div className={styles.engItem}>
-                      <span className={styles.engIcon}>💬</span>
-                      <div className={styles.engLabel}>{id ? "Komentar" : "Comments"}</div>
-                      <div className={styles.engValue}>{fmtNum(meta.comments)}</div>
-                    </div>
-                    <div className={styles.engItem}>
-                      <span className={styles.engIcon}>🔖</span>
-                      <div className={styles.engLabel}>{id ? "Favorit" : "Favorites"}</div>
-                      <div className={styles.engValue}>{fmtNum(meta.favorites)}</div>
-                    </div>
-                    <div className={styles.engItem}>
-                      <span className={styles.engIcon}>↗️</span>
-                      <div className={styles.engLabel}>Shares</div>
-                      <div className={styles.engValue}>{fmtNum(meta.shares)}</div>
-                    </div>
-                    <div className={styles.engItem}>
-                      <span className={styles.engIcon}>⬇️</span>
-                      <div className={styles.engLabel}>Downloads</div>
-                      <div className={styles.engValue}>{fmtNum(meta.downloads)}</div>
-                    </div>
+                    <EngItem icon={<IconEye />}      label="Views"                          value={fmtNum(meta.views)} />
+                    <EngItem icon={<IconHeart />}     label="Likes"                          value={fmtNum(meta.likes)} />
+                    <EngItem icon={<IconComment />}   label={id ? "Komentar" : "Comments"}   value={fmtNum(meta.comments)} />
+                    <EngItem icon={<IconBookmark />}  label={id ? "Favorit" : "Favorites"}   value={fmtNum(meta.favorites)} />
+                    <EngItem icon={<IconShare />}     label="Shares"                         value={fmtNum(meta.shares)} />
+                    <EngItem icon={<IconDownload />}  label="Downloads"                      value={fmtNum(meta.downloads)} />
                   </div>
                   {meta.engagementRate !== null && (
                     <div className={styles.engRate}>
@@ -352,13 +345,15 @@ export default function InspectorPage() {
                     </div>
                   )}
                 </div>
+
               </div>
             </>
           )}
 
-          {/* Empty state */}
+          {/* ── Empty State ─────────────────────────────────────────────── */}
           {!meta && !loading && logs.length === 0 && (
             <div className={styles.emptyState}>
+              <div className={styles.emptyIcon}><IconSearch /></div>
               <div className={styles.emptyLabel}>UNWANTED LABS — Inspector</div>
               <h3 className={styles.emptyTitle}>{id ? "Paste URL Video TikTok" : "Paste a TikTok Video URL"}</h3>
               <p className={styles.emptyDesc}>
@@ -366,6 +361,7 @@ export default function InspectorPage() {
               </p>
             </div>
           )}
+
         </div>
       </main>
     </>
