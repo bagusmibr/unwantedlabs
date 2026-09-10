@@ -152,6 +152,10 @@
   color: rgba(255,255,255,0.7);
   font-family: ui-monospace, 'SF Mono', monospace;
 }
+.metaHighlight {
+  color: #fff;
+  font-weight: 500;
+}
 
 /* Raw */
 .rawDetails { margin-top: 20px; }
