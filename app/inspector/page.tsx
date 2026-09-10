@@ -20,15 +20,22 @@ function extractVideoId(url: string): string | null {
 
 function fmtSize(bytes: number | null): string {
   if (!bytes) return "—";
-  if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + " MB";
-  return (bytes / 1024).toFixed(0) + " KB";
+  return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + " MB" : (bytes / 1024).toFixed(0) + " KB";
 }
 
 function fmtDuration(sec: number | null): string {
   if (!sec) return "—";
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
+  const m = Math.floor(sec / 60), s = sec % 60;
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function MetaCell({ label, value, highlight }: { label: string; value: React.ReactNode; highlight?: boolean }) {
+  return (
+    <div className={styles.metaItem}>
+      <div className={styles.metaLabel}>{label}</div>
+      <div className={`${styles.metaValue} ${highlight ? styles.metaHighlight : ""}`}>{value}</div>
+    </div>
+  );
 }
 
 export default function InspectorPage() {
@@ -38,48 +45,18 @@ export default function InspectorPage() {
   const [meta, setMeta] = useState<VideoMeta | null>(null);
   const [error, setError] = useState("");
 
-  const t = {
-    badge1:     lang === "id" ? "Gratis"          : "Free",
-    badge2:     lang === "id" ? "Tanpa Login"     : "No Login",
-    title:      "Video Inspector",
-    sub:        lang === "id" ? "Analisis metadata video TikTok" : "Analyze TikTok video metadata",
-    placeholder:"https://www.tiktok.com/@user/video/123",
-    hint:       lang === "id" ? "Format: tiktok.com/@user/video/ID atau vm.tiktok.com/ID" : "Format: tiktok.com/@user/video/ID or vm.tiktok.com/ID",
-    inspect:    "Inspect",
-    loading:    lang === "id" ? "Memuat..." : "Loading...",
-    errInvalid: lang === "id" ? "Masukkan URL video TikTok yang valid." : "Enter a valid TikTok video URL.",
-    errFail:    lang === "id" ? "Gagal mengambil metadata." : "Failed to fetch metadata.",
-    emptyLabel: "UNWANTED LABS — Inspector",
-    emptyTitle: lang === "id" ? "Paste URL Video TikTok" : "Paste a TikTok Video URL",
-    emptyDesc:  lang === "id" ? "Informasi tersedia: judul, resolusi, FPS, bitrate, durasi, Video ID" : "Available info: title, resolution, FPS, bitrate, duration, Video ID",
-    lThumbnail: "Thumbnail",
-    lResolution:lang === "id" ? "Resolusi" : "Resolution",
-    lFPS:       "FPS",
-    lBitrate:   "Bitrate",
-    lDuration:  lang === "id" ? "Durasi"   : "Duration",
-    lPlatform:  "Platform",
-    lVideoID:   "Video ID",
-    lSize:      lang === "id" ? "Ukuran File" : "File Size",
-    lCodec:     "Codec",
-    lQuality:   lang === "id" ? "Kualitas" : "Quality",
-    rawBtn:     "Raw JSON",
-    noteBox:    lang === "id"
-      ? "Data dari TikTok oEmbed + tikwm API. FPS & bitrate diambil dari metadata embedded di halaman TikTok."
-      : "Data from TikTok oEmbed + tikwm API. FPS & bitrate are extracted from TikTok page embedded metadata.",
-  };
+  const id = lang === "id";
 
   async function inspect() {
     setError(""); setMeta(null);
-    if (!url.includes("tiktok.com") && !url.includes("vm.tiktok.com")) {
-      setError(t.errInvalid); return;
-    }
+    if (!url.includes("tiktok.com")) { setError(id ? "Masukkan URL video TikTok yang valid." : "Enter a valid TikTok video URL."); return; }
     setLoading(true);
     try {
       const res = await fetch(`/api/inspector?url=${encodeURIComponent(url)}`);
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Gagal");
       setMeta(data.data);
-    } catch (e: unknown) { setError((e as Error).message || t.errFail); }
+    } catch (e: unknown) { setError((e as Error).message || (id ? "Gagal mengambil metadata." : "Failed to fetch metadata.")); }
     setLoading(false);
   }
 
@@ -90,14 +67,15 @@ export default function InspectorPage() {
       <Navbar />
       <main className={styles.main}>
         <div className="wrap">
+          {/* Header */}
           <div className={`${styles.header} animate-in`}>
             <div className={styles.headerBadge}>
-              <span>{t.badge1}</span>
+              <span>{id ? "Gratis" : "Free"}</span>
               <span style={{ opacity: 0.4 }}>·</span>
-              <span>{t.badge2}</span>
+              <span>{id ? "Tanpa Login" : "No Login"}</span>
             </div>
-            <h1 className={styles.title}>{t.title}</h1>
-            <p className={styles.sub}>{t.sub}</p>
+            <h1 className={styles.title}>Video Inspector</h1>
+            <p className={styles.sub}>{id ? "Analisis metadata video TikTok" : "Analyze TikTok video metadata"}</p>
           </div>
 
           {/* Search */}
@@ -106,128 +84,123 @@ export default function InspectorPage() {
               <input
                 className={`input ${styles.searchInput}`}
                 type="url"
-                placeholder={t.placeholder}
+                placeholder="https://www.tiktok.com/@user/video/123"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && inspect()}
               />
               <button className={`btn ${styles.searchBtn}`} onClick={inspect} disabled={loading || !url}>
-                {loading ? <div className="spinner" style={{ width: 12, height: 12 }} /> : t.inspect}
+                {loading ? <div className="spinner" style={{ width: 12, height: 12 }} /> : "Inspect"}
               </button>
             </div>
             {error && <div className={styles.errorMsg}>{error}</div>}
-            <p className={styles.searchHint}>{t.hint}</p>
+            <p className={styles.searchHint}>
+              {id ? "Format: tiktok.com/@user/video/ID atau vm.tiktok.com/ID" : "Format: tiktok.com/@user/video/ID or vm.tiktok.com/ID"}
+            </p>
           </div>
 
           {/* Result */}
           {meta && (
-            <div className={styles.resultCard}>
-              {/* Left — TikTok embed player */}
-              {meta.embedUrl && (
-                <div className={styles.embedWrap}>
-                  <iframe
-                    src={meta.embedUrl}
-                    className={styles.embedFrame}
-                    allowFullScreen
-                    allow="autoplay; encrypted-media"
-                    scrolling="no"
-                    frameBorder="0"
-                  />
-                </div>
-              )}
-
-              {/* Right — Metadata panel */}
-              <div className={styles.resultTop}>
-                {/* Fallback thumbnail if no embed */}
-                {!meta.embedUrl && meta.thumbnail_url && (
+            <div className={`${styles.resultCard} animate-in`} style={{ animationDelay: "0.15s" }}>
+              {/* Top: Thumbnail + title */}
+              <div className={styles.resultHeader}>
+                {meta.thumbnail_url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={meta.thumbnail_url} alt="Thumbnail" className={styles.thumbnail} referrerPolicy="no-referrer" />
+                  <img
+                    src={meta.thumbnail_url}
+                    alt="Thumbnail"
+                    className={styles.thumbnail}
+                    referrerPolicy="no-referrer"
+                  />
                 )}
-                <div className={styles.resultInfo}>
+                <div className={styles.resultMeta}>
+                  <div className={styles.resultPlatform}>{meta.provider_name}</div>
                   <h2 className={styles.videoTitle}>{meta.title || "—"}</h2>
                   <a href={meta.author_url} target="_blank" rel="noopener noreferrer" className={styles.author}>
-                    {meta.author_name}{meta.author_id ? ` (@${meta.author_id})` : ""}
+                    {meta.author_name}{meta.author_id ? ` · @${meta.author_id}` : ""}
                   </a>
-                  <div className={styles.metaGrid}>
-                    {/* Resolution */}
-                    <div className={styles.metaItem}>
-                      <div className={styles.metaLabel}>{t.lResolution}</div>
-                      <div className={styles.metaValue}>
-                        {meta.width && meta.height ? `${meta.width}×${meta.height}` : "—"}
-                      </div>
-                    </div>
-                    {/* FPS */}
-                    <div className={styles.metaItem}>
-                      <div className={styles.metaLabel}>{t.lFPS}</div>
-                      <div className={`${styles.metaValue} ${meta.fps ? styles.metaHighlight : ""}`}>
-                        {meta.fps ? `${meta.fps} fps` : <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>N/A</span>}
-                      </div>
-                    </div>
-                    {/* Bitrate */}
-                    <div className={styles.metaItem}>
-                      <div className={styles.metaLabel}>{t.lBitrate}</div>
-                      <div className={`${styles.metaValue} ${meta.bitrateKbps ? styles.metaHighlight : ""}`}>
-                        {meta.bitrateKbps ? `${meta.bitrateKbps.toLocaleString()} kbps` : "—"}
-                      </div>
-                    </div>
-                    {/* Duration */}
-                    <div className={styles.metaItem}>
-                      <div className={styles.metaLabel}>{t.lDuration}</div>
-                      <div className={styles.metaValue}>{fmtDuration(meta.duration)}</div>
-                    </div>
-                    {/* File Size */}
-                    <div className={styles.metaItem}>
-                      <div className={styles.metaLabel}>{t.lSize}</div>
-                      <div className={styles.metaValue}>{fmtSize(meta.fileSize)}</div>
-                    </div>
-                    {/* Thumbnail size */}
-                    <div className={styles.metaItem}>
-                      <div className={styles.metaLabel}>{t.lThumbnail}</div>
-                      <div className={styles.metaValue}>{meta.thumbnail_width}×{meta.thumbnail_height}</div>
-                    </div>
-                    {/* Codec */}
-                    {meta.codecType && (
-                      <div className={styles.metaItem}>
-                        <div className={styles.metaLabel}>{t.lCodec}</div>
-                        <div className={styles.metaValue}>{meta.codecType}</div>
-                      </div>
+                  <div className={styles.resultActions}>
+                    {meta.embedUrl && (
+                      <a
+                        href={`https://www.tiktok.com/@${meta.author_id || "_"}/video/${videoId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`btn ${styles.watchBtn}`}
+                      >
+                        {id ? "Tonton di TikTok" : "Watch on TikTok"} ↗
+                      </a>
                     )}
-                    {/* Quality Definition */}
-                    {meta.definition && (
-                      <div className={styles.metaItem}>
-                        <div className={styles.metaLabel}>{t.lQuality}</div>
-                        <div className={styles.metaValue}>{meta.definition}</div>
-                      </div>
-                    )}
-                    {/* Platform */}
-                    <div className={styles.metaItem}>
-                      <div className={styles.metaLabel}>{t.lPlatform}</div>
-                      <div className={styles.metaValue}>{meta.provider_name}</div>
-                    </div>
-                    {/* Video ID */}
-                    <div className={styles.metaItem}>
-                      <div className={styles.metaLabel}>{t.lVideoID}</div>
-                      <div className={styles.metaValue} style={{ fontFamily: "ui-monospace, monospace", fontSize: 10 }}>
-                        {videoId || "—"}
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Divider */}
+              <div className={styles.divider} />
+
+              {/* Metadata grid */}
+              <div className={styles.metaGrid}>
+                <MetaCell
+                  label={id ? "Resolusi" : "Resolution"}
+                  value={meta.width && meta.height && typeof meta.width === "number" && typeof meta.height === "number"
+                    ? `${meta.width}×${meta.height}`
+                    : meta.thumbnail_width && meta.thumbnail_height
+                    ? `${meta.thumbnail_width}×${meta.thumbnail_height} (thumbnail)`
+                    : "—"}
+                />
+                <MetaCell
+                  label="FPS"
+                  highlight={!!meta.fps}
+                  value={meta.fps ? `${meta.fps} fps` : <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 10 }}>N/A</span>}
+                />
+                <MetaCell
+                  label="Bitrate"
+                  highlight={!!meta.bitrateKbps}
+                  value={meta.bitrateKbps ? `${meta.bitrateKbps.toLocaleString()} kbps` : "—"}
+                />
+                <MetaCell
+                  label={id ? "Durasi" : "Duration"}
+                  value={fmtDuration(meta.duration)}
+                />
+                <MetaCell
+                  label={id ? "Ukuran File" : "File Size"}
+                  value={fmtSize(meta.fileSize)}
+                />
+                <MetaCell
+                  label="Thumbnail"
+                  value={meta.thumbnail_width && meta.thumbnail_height ? `${meta.thumbnail_width}×${meta.thumbnail_height}` : "—"}
+                />
+                {meta.codecType && <MetaCell label="Codec" value={meta.codecType} />}
+                {meta.definition && <MetaCell label={id ? "Kualitas" : "Quality"} value={meta.definition} />}
+                <MetaCell label="Platform" value={meta.provider_name} />
+                <MetaCell
+                  label="Video ID"
+                  value={<span style={{ fontFamily: "ui-monospace, monospace", fontSize: 10 }}>{videoId || "—"}</span>}
+                />
+              </div>
+
+              {/* Raw JSON */}
               <details className={styles.rawDetails}>
-                <summary className={styles.rawSummary}>{t.rawBtn}</summary>
+                <summary className={styles.rawSummary}>Raw JSON</summary>
                 <pre className={styles.rawPre}>{JSON.stringify(meta, null, 2)}</pre>
               </details>
-              <div className={styles.noteBox}>{t.noteBox}</div>
+
+              {/* Note */}
+              <div className={styles.noteBox}>
+                {id
+                  ? "Data dari TikTok oEmbed + tikwm API. FPS & bitrate dari metadata publik TikTok."
+                  : "Data from TikTok oEmbed + tikwm API. FPS & bitrate from public TikTok metadata."}
+              </div>
             </div>
           )}
 
           {/* Empty state */}
           {!meta && !loading && (
             <div className={styles.emptyState}>
-              <div className={styles.emptyLabel}>{t.emptyLabel}</div>
-              <h3 className={styles.emptyTitle}>{t.emptyTitle}</h3>
-              <p className={styles.emptyDesc}>{t.emptyDesc}</p>
+              <div className={styles.emptyLabel}>UNWANTED LABS — Inspector</div>
+              <h3 className={styles.emptyTitle}>{id ? "Paste URL Video TikTok" : "Paste a TikTok Video URL"}</h3>
+              <p className={styles.emptyDesc}>
+                {id ? "Informasi tersedia: judul, resolusi, FPS, bitrate, durasi, Video ID" : "Available info: title, resolution, FPS, bitrate, duration, Video ID"}
+              </p>
             </div>
           )}
         </div>
