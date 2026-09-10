@@ -9,7 +9,7 @@ interface VideoMeta {
   thumbnail_url: string; thumbnail_width: number; thumbnail_height: number;
   provider_name: string; width: number | null; height: number | null;
   duration: number | null; fps: number | null; bitrateKbps: number | null;
-  fileSize: number | null;
+  fileSize: number | null; videoId: string | null; embedUrl: string | null;
 }
 
 function extractVideoId(url: string): string | null {
@@ -119,8 +119,21 @@ export default function InspectorPage() {
           {/* Result */}
           {meta && (
             <div className={styles.resultCard}>
+              {/* TikTok Native Embed Player */}
+              {meta.embedUrl && (
+                <div className={styles.embedWrap}>
+                  <iframe
+                    src={meta.embedUrl}
+                    className={styles.embedFrame}
+                    allowFullScreen
+                    allow="autoplay; encrypted-media"
+                    scrolling="no"
+                    frameBorder="0"
+                  />
+                </div>
+              )}
               <div className={styles.resultTop}>
-                {meta.thumbnail_url && (
+                {!meta.embedUrl && meta.thumbnail_url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={meta.thumbnail_url} alt="Thumbnail" className={styles.thumbnail} referrerPolicy="no-referrer" />
                 )}
@@ -141,7 +154,7 @@ export default function InspectorPage() {
                     <div className={styles.metaItem}>
                       <div className={styles.metaLabel}>{t.lFPS}</div>
                       <div className={`${styles.metaValue} ${meta.fps ? styles.metaHighlight : ""}`}>
-                        {meta.fps ? `${meta.fps} fps` : "—"}
+                        {meta.fps ? `${meta.fps} fps` : <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>N/A</span>}
                       </div>
                     </div>
                     {/* Bitrate */}

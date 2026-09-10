@@ -78,9 +78,26 @@
 
 /* Result */
 .resultCard {
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 28px;
-  animation: fadeUp 0.35s ease both;
+  border: 1px solid rgba(255,255,255,0.08);
+  overflow: hidden;
+  animation: fadeUp 0.4s ease both;
+  animation-delay: 0.2s;
+}
+
+/* TikTok embed player */
+.embedWrap {
+  width: 100%;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.embedFrame {
+  width: 325px;
+  height: 760px;
+  border: none;
+  display: block;
 }
 
 .resultTop {
