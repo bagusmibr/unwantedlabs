@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   turbopack: {},
-  serverExternalPackages: ["firebase-admin"],
+  serverExternalPackages: ["firebase-admin", "tiktok-video-scraper", "got"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
