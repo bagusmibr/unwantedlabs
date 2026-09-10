@@ -10,6 +10,7 @@ interface VideoMeta {
   provider_name: string; width: number | null; height: number | null;
   duration: number | null; fps: number | null; bitrateKbps: number | null;
   fileSize: number | null; videoId: string | null; embedUrl: string | null;
+  codecType: string | null; definition: string | null;
 }
 
 function extractVideoId(url: string): string | null {
@@ -59,10 +60,12 @@ export default function InspectorPage() {
     lPlatform:  "Platform",
     lVideoID:   "Video ID",
     lSize:      lang === "id" ? "Ukuran File" : "File Size",
+    lCodec:     "Codec",
+    lQuality:   lang === "id" ? "Kualitas" : "Quality",
     rawBtn:     "Raw JSON",
     noteBox:    lang === "id"
-      ? "Data dari TikTok oEmbed + tikwm API. FPS dihitung dari header MP4 video. Bitrate estimasi dari ukuran file ÷ durasi."
-      : "Data from TikTok oEmbed + tikwm API. FPS parsed from MP4 header. Bitrate estimated from file size ÷ duration.",
+      ? "Data dari TikTok oEmbed + tikwm API. FPS & bitrate diambil dari metadata embedded di halaman TikTok."
+      : "Data from TikTok oEmbed + tikwm API. FPS & bitrate are extracted from TikTok page embedded metadata.",
   };
 
   async function inspect() {
@@ -86,7 +89,7 @@ export default function InspectorPage() {
     <>
       <Navbar />
       <main className={styles.main}>
-        <div className="wrap-md">
+        <div className="wrap">
           <div className={`${styles.header} animate-in`}>
             <div className={styles.headerBadge}>
               <span>{t.badge1}</span>
@@ -119,7 +122,7 @@ export default function InspectorPage() {
           {/* Result */}
           {meta && (
             <div className={styles.resultCard}>
-              {/* TikTok Native Embed Player */}
+              {/* Left — TikTok embed player */}
               {meta.embedUrl && (
                 <div className={styles.embedWrap}>
                   <iframe
@@ -132,7 +135,10 @@ export default function InspectorPage() {
                   />
                 </div>
               )}
+
+              {/* Right — Metadata panel */}
               <div className={styles.resultTop}>
+                {/* Fallback thumbnail if no embed */}
                 {!meta.embedUrl && meta.thumbnail_url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={meta.thumbnail_url} alt="Thumbnail" className={styles.thumbnail} referrerPolicy="no-referrer" />
@@ -179,6 +185,20 @@ export default function InspectorPage() {
                       <div className={styles.metaLabel}>{t.lThumbnail}</div>
                       <div className={styles.metaValue}>{meta.thumbnail_width}×{meta.thumbnail_height}</div>
                     </div>
+                    {/* Codec */}
+                    {meta.codecType && (
+                      <div className={styles.metaItem}>
+                        <div className={styles.metaLabel}>{t.lCodec}</div>
+                        <div className={styles.metaValue}>{meta.codecType}</div>
+                      </div>
+                    )}
+                    {/* Quality Definition */}
+                    {meta.definition && (
+                      <div className={styles.metaItem}>
+                        <div className={styles.metaLabel}>{t.lQuality}</div>
+                        <div className={styles.metaValue}>{meta.definition}</div>
+                      </div>
+                    )}
                     {/* Platform */}
                     <div className={styles.metaItem}>
                       <div className={styles.metaLabel}>{t.lPlatform}</div>
