@@ -1,23 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth, getAdminDb, isAdmin } from "@/lib/firebase-admin";
+import { requireAdmin } from "@/lib/auth";
+import { getAdminDb } from "@/lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
-  const session = req.cookies.get("session")?.value;
-  if (!session) return NextResponse.json({ ok: false }, { status: 401 });
-  try {
-    const adminAuth = await getAdminAuth();
-    const decoded = await adminAuth.verifySessionCookie(session, true);
-    const adminUser = await adminAuth.getUser(decoded.uid);
-    if (!isAdmin(adminUser.email)) return NextResponse.json({ ok: false }, { status: 403 });
+  const admin = await requireAdmin(req);
+  if (!admin) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
 
+  try {
     const { uid } = await req.json();
+    if (typeof uid !== "string" || !uid) {
+      return NextResponse.json({ ok: false, error: "UID tidak valid" }, { status: 400 });
+    }
+
     const adminDb = await getAdminDb();
-    const devicesRef = adminDb.collection("users").doc(uid).collection("devices");
-    const snap = await devicesRef.get();
-    await Promise.all(snap.docs.map((d) => d.ref.delete()));
+    const userRef = adminDb.collection("users").doc(uid);
+
+    // Hapus perangkat terdaftar sekaligus riwayat percobaan PC lain.
+    for (const sub of ["devices", "deviceAttempts"]) {
+      const snap = await userRef.collection(sub).get();
+      await Promise.all(snap.docs.map((d) => d.ref.delete()));
+    }
 
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ ok: false }, { status: 500 });
+  } catch (e) {
+    console.error("admin/reset-pc error:", e);
+    return NextResponse.json({ ok: false, error: "Gagal reset PC" }, { status: 500 });
   }
 }

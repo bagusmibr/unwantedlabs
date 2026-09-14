@@ -19,12 +19,34 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Status user (termasuk isAdmin) diambil dari server. localStorage hanya
+  // dipakai sebagai tampilan awal supaya navbar tidak berkedip — nilainya
+  // tidak pernah dipercaya untuk menentukan hak akses.
   useEffect(() => {
     try {
       const saved = localStorage.getItem("ul_user");
-      if (saved) setUser(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setUser({ email: parsed.email, name: parsed.name, isAdmin: false });
+      }
     } catch {}
+
+    fetch("/api/user/status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.ok) setUser({ email: d.email, name: d.name || d.email, isAdmin: !!d.isAdmin });
+        else setUser(null);
+      })
+      .catch(() => {});
   }, []);
+
+  async function handleLogout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {}
+    localStorage.removeItem("ul_user");
+    window.location.href = "/";
+  }
 
   const navLinks = [
     { href: "/", label: lang === "id" ? "Home" : "Home" },
@@ -79,14 +101,7 @@ export default function Navbar() {
                     <Link href="/admin" className={styles.dropItem} onClick={() => setMenuOpen(false)}>Admin</Link>
                   )}
                   <div className={styles.dropLine} />
-                  <button
-                    className={styles.dropItem}
-                    onClick={() => {
-                      localStorage.removeItem("ul_user");
-                      document.cookie = "session=; max-age=0; path=/";
-                      window.location.href = "/";
-                    }}
-                  >
+                  <button className={styles.dropItem} onClick={handleLogout}>
                     {lang === "id" ? "Logout" : "Sign Out"}
                   </button>
                 </div>

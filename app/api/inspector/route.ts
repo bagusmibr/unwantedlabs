@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionUser } from "@/lib/auth";
 
 const UA        = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const UA_MOBILE = "okhttp/3.14.9";
@@ -138,11 +139,69 @@ async function detectFPS(
   return null;
 }
 
+// ── Gerbang & pembatas ─────────────────────────────────────────────────────
+// Setel false kalau Inspector mau dibuka untuk publik lagi (lihat catatan QC).
+const REQUIRE_LOGIN = true;
+
+const RATE_LIMIT = 15;            // permintaan
+const RATE_WINDOW_MS = 60_000;    // per menit, per user
+const hits = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimited(key: string): boolean {
+  const now = Date.now();
+  const cur = hits.get(key);
+  if (!cur || now > cur.resetAt) {
+    hits.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return false;
+  }
+  cur.count += 1;
+  return cur.count > RATE_LIMIT;
+}
+
+/** Hanya izinkan URL TikTok yang benar — mencegah endpoint dipakai sebagai proxy. */
+function isTikTokUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    const host = u.hostname.toLowerCase().replace(/^www\./, "");
+    return (
+      host === "tiktok.com" ||
+      host.endsWith(".tiktok.com") ||
+      host === "vt.tiktok.com" ||
+      host === "vm.tiktok.com"
+    );
+  } catch {
+    return false;
+  }
+}
+
 // ── Main handler ───────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
+  const user = await getSessionUser(req);
+  if (REQUIRE_LOGIN && !user) {
+    return NextResponse.json(
+      { ok: false, error: "Silakan masuk untuk memakai Inspector." },
+      { status: 401 }
+    );
+  }
+
+  const rateKey =
+    user?.uid ||
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+    "anon";
+  if (rateLimited(rateKey)) {
+    return NextResponse.json(
+      { ok: false, error: "Terlalu banyak permintaan. Coba lagi sebentar lagi." },
+      { status: 429 }
+    );
+  }
+
   const { searchParams } = new URL(req.url);
   const url = searchParams.get("url");
   if (!url) return NextResponse.json({ ok: false, error: "URL diperlukan" }, { status: 400 });
+  if (url.length > 512 || !isTikTokUrl(url)) {
+    return NextResponse.json({ ok: false, error: "URL TikTok tidak valid." }, { status: 400 });
+  }
 
   const videoIdMatch = url.match(/video\/(\d+)/);
   const videoId = videoIdMatch?.[1] ?? null;

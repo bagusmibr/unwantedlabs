@@ -1,17 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { getSessionUser } from "@/lib/auth";
+import { getAdminDb } from "@/lib/firebase-admin";
 
 export async function GET(req: NextRequest) {
-  const session = req.cookies.get("session")?.value;
-  if (!session) return NextResponse.json({ ok: false, hasAccess: false }, { status: 401 });
+  const user = await getSessionUser(req);
+  if (!user) {
+    return NextResponse.json({ ok: false, hasAccess: false, isAdmin: false }, { status: 401 });
+  }
   try {
-    const adminAuth = await getAdminAuth();
-    const decoded = await adminAuth.verifySessionCookie(session, true);
     const adminDb = await getAdminDb();
-    const snap = await adminDb.collection("users").doc(decoded.uid).get();
+    const snap = await adminDb.collection("users").doc(user.uid).get();
     const data = snap.data();
-    return NextResponse.json({ ok: true, hasAccess: data?.hasAccess ?? false, uid: decoded.uid });
-  } catch {
-    return NextResponse.json({ ok: false, hasAccess: false }, { status: 500 });
+    return NextResponse.json({
+      ok: true,
+      hasAccess: data?.hasAccess ?? false,
+      // isAdmin datang dari server, bukan dari localStorage yang bisa diedit user.
+      isAdmin: user.isAdmin,
+      name: user.name || data?.name || null,
+      email: user.email,
+    });
+  } catch (e) {
+    console.error("status error:", e);
+    return NextResponse.json({ ok: false, hasAccess: false, isAdmin: false }, { status: 500 });
   }
 }

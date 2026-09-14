@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { LangProvider } from "@/lib/lang";
-import SecurityGuard from "@/components/SecurityGuard";
 
 export const metadata: Metadata = {
   title: "UNWANTED LABS — TikTok Studio",
@@ -24,7 +23,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="orb orb-3" />
         </div>
         <LangProvider>
-          <SecurityGuard />
           {children}
         </LangProvider>
       </body>

@@ -4,14 +4,28 @@ import { getAdminAuth, getAdminDb, isAdmin } from "@/lib/firebase-admin";
 export async function POST(req: Request) {
   try {
     const { token } = await req.json();
+    if (!token || typeof token !== "string") {
+      return NextResponse.json({ ok: false, error: "Token tidak valid." }, { status: 400 });
+    }
+
     const adminAuth = await getAdminAuth();
-    const decoded = await adminAuth.verifyIdToken(token);
-    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
+    const decoded = await adminAuth.verifyIdToken(token, true);
+
+    // GERBANG: cek verifikasi email HARUS di server. Pengecekan di
+    // login/page.tsx bisa dilewati dengan memanggil Firebase REST langsung.
+    if (!decoded.email_verified) {
+      return NextResponse.json(
+        { ok: false, error: "Email belum diverifikasi. Silakan cek kotak masuk kamu." },
+        { status: 403 }
+      );
+    }
+
+    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 hari
     const sessionCookie = await adminAuth.createSessionCookie(token, { expiresIn });
 
     const adminStatus = isAdmin(decoded.email);
 
-    // Ensure user exists in Firestore
+    // Pastikan user ada di Firestore
     const adminDb = await getAdminDb();
     const userRef = adminDb.collection("users").doc(decoded.uid);
     const snap = await userRef.get();
@@ -35,7 +49,8 @@ export async function POST(req: Request) {
     });
     return res;
   } catch (e: unknown) {
+    // Detail error hanya untuk log server — jangan dikirim ke klien.
     console.error("Session error:", e);
-    return NextResponse.json({ ok: false, error: String(e) }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "Gagal membuat sesi." }, { status: 401 });
   }
 }

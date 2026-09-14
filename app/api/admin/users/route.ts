@@ -1,27 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth, getAdminDb, isAdmin } from "@/lib/firebase-admin";
+import { requireAdmin } from "@/lib/auth";
+import { getAdminDb } from "@/lib/firebase-admin";
 
 export async function GET(req: NextRequest) {
-  const session = req.cookies.get("session")?.value;
-  if (!session) return NextResponse.json({ ok: false }, { status: 401 });
+  const admin = await requireAdmin(req);
+  if (!admin) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
 
   try {
-    const adminAuth = await getAdminAuth();
-    const decoded = await adminAuth.verifySessionCookie(session, true);
-    const user = await adminAuth.getUser(decoded.uid);
-    if (!isAdmin(user.email)) return NextResponse.json({ ok: false }, { status: 403 });
-
     const adminDb = await getAdminDb();
     const snap = await adminDb.collection("users").orderBy("createdAt", "desc").limit(200).get();
 
-    // Fetch devices subcollection for each user in parallel
     const users = await Promise.all(
       snap.docs.map(async (d) => {
-        const devicesSnap = await adminDb
-          .collection("users")
-          .doc(d.id)
-          .collection("devices")
-          .get();
+        const [devicesSnap, attemptsSnap] = await Promise.all([
+          adminDb.collection("users").doc(d.id).collection("devices").get(),
+          adminDb.collection("users").doc(d.id).collection("deviceAttempts").get(),
+        ]);
 
         const devices = devicesSnap.docs.map((dev) => ({
           fingerprint: dev.id,
@@ -31,12 +25,13 @@ export async function GET(req: NextRequest) {
           lastSeen: dev.data().lastSeen || null,
         }));
 
-        return { uid: d.id, ...d.data(), devices };
+        return { uid: d.id, ...d.data(), devices, attemptCount: attemptsSnap.size };
       })
     );
 
     return NextResponse.json({ ok: true, users });
-  } catch {
-    return NextResponse.json({ ok: false }, { status: 500 });
+  } catch (e) {
+    console.error("admin/users error:", e);
+    return NextResponse.json({ ok: false, error: "Gagal memuat data" }, { status: 500 });
   }
 }

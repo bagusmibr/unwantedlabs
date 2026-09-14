@@ -46,8 +46,11 @@ export default function LoginPage() {
         photo: user.photoURL,
         isAdmin: data.isAdmin,
       }));
-      router.push("/dashboard");
-    } catch (e: unknown) {
+      // Hormati ?next= dari proxy, tapi hanya path internal (cegah open redirect).
+      const nextParam = new URLSearchParams(window.location.search).get("next");
+      const dest = nextParam && /^\/[^/\\]/.test(nextParam) ? nextParam : "/dashboard";
+      router.push(dest);
+    } catch {
       setError(
         lang === "id"
           ? "Gagal terhubung ke server. Periksa koneksi internet kamu."

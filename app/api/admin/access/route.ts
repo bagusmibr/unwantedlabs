@@ -1,34 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth, getAdminDb, isAdmin } from "@/lib/firebase-admin";
-
-async function requireAdmin(req: NextRequest) {
-  const session = req.cookies.get("session")?.value;
-  if (!session) return null;
-  try {
-    const adminAuth = await getAdminAuth();
-    const decoded = await adminAuth.verifySessionCookie(session, true);
-    const user = await adminAuth.getUser(decoded.uid);
-    if (!isAdmin(user.email)) return null;
-    return decoded.uid;
-  } catch { return null; }
-}
+import { requireAdmin } from "@/lib/auth";
+import { getAdminDb } from "@/lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
-  const adminUid = await requireAdmin(req);
-  if (!adminUid) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+  const admin = await requireAdmin(req);
+  if (!admin) return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
 
-  const { uid, action } = await req.json();
-  if (!uid || !action) return NextResponse.json({ ok: false, error: "Missing params" }, { status: 400 });
+  try {
+    const { uid, action } = await req.json();
+    if (typeof uid !== "string" || (action !== "grant" && action !== "revoke")) {
+      return NextResponse.json({ ok: false, error: "Parameter tidak valid" }, { status: 400 });
+    }
 
-  const adminAuth = await getAdminAuth();
-  const adminUser = await adminAuth.getUser(adminUid);
-  const adminDb = await getAdminDb();
+    const grant = action === "grant";
+    const adminDb = await getAdminDb();
 
-  await adminDb.collection("users").doc(uid).update({
-    hasAccess: action === "grant",
-    accessGrantedAt: action === "grant" ? new Date() : null,
-    accessGrantedBy: action === "grant" ? (adminUser.email || "admin") : null,
-  });
+    // set + merge: tidak melempar error kalau dokumen user belum ada.
+    await adminDb.collection("users").doc(uid).set(
+      {
+        hasAccess: grant,
+        accessGrantedAt: grant ? new Date() : null,
+        accessGrantedBy: grant ? admin.email || "admin" : null,
+      },
+      { merge: true }
+    );
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("admin/access error:", e);
+    return NextResponse.json({ ok: false, error: "Gagal ubah akses" }, { status: 500 });
+  }
 }
