@@ -4,6 +4,12 @@ const nextConfig: NextConfig = {
   turbopack: {},
   serverExternalPackages: ["firebase-admin", "tiktok-video-scraper", "got"],
   poweredByHeader: false,
+  // Sumber mesin dibaca dengan fs saat runtime, jadi berkasnya harus ikut
+  // dipaketkan ke fungsi /api/engine. Tanpa baris ini, route-nya jalan di lokal
+  // tapi 500 di Vercel karena engine/ tidak ikut ter-deploy.
+  outputFileTracingIncludes: {
+    "/api/engine": ["./engine/**/*"],
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
