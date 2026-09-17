@@ -8,6 +8,8 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  sendPasswordResetEmail,
+  type User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import styles from "./login.module.css";
@@ -21,6 +23,7 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [resendMsg, setResendMsg] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   async function handleSession(token: string, user: { email: string | null; displayName: string | null; photoURL: string | null }) {
     try {
@@ -61,7 +64,7 @@ export default function LoginPage() {
     }
   }
 
-  async function resendVerification(user: any) {
+  async function resendVerification(user: User) {
     try {
       const { sendEmailVerification } = await import("firebase/auth");
       await sendEmailVerification(user);
@@ -100,6 +103,32 @@ export default function LoginPage() {
       }
       setLoading(false);
     }
+  }
+
+  /**
+   * Sebelumnya tidak ada jalan pulih sama sekali: pelanggan yang lupa password
+   * hanya bisa chat admin dan direset manual dari Firebase Console.
+   * Pesan sengaja sama untuk email terdaftar maupun tidak, supaya halaman ini
+   * tidak bisa dipakai menebak-nebak email siapa yang punya akun.
+   */
+  async function onReset() {
+    setError(""); setResendMsg("");
+    if (!email) {
+      setError(lang === "id" ? "Isi dulu emailmu di atas." : "Enter your email above first.");
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth!, email);
+    } catch {
+      // Diabaikan dengan sengaja — lihat catatan di atas.
+    }
+    setResendMsg(
+      lang === "id"
+        ? "Kalau email itu terdaftar, link reset password sudah dikirim. Cek juga folder Spam."
+        : "If that email is registered, a reset link has been sent. Check your Spam folder too."
+    );
+    setResetLoading(false);
   }
 
   async function onGoogle() {
@@ -161,7 +190,14 @@ export default function LoginPage() {
             <label className="input-label">Password</label>
             <input className="input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
           </div>
-          {resendMsg && <div style={{ color: "#4caf50", fontSize: 13, marginBottom: 12 }}>{resendMsg}</div>}
+          <div className={styles.forgotRow}>
+            <button type="button" className={styles.forgotLink} onClick={onReset} disabled={resetLoading}>
+              {resetLoading
+                ? (lang === "id" ? "Mengirim..." : "Sending...")
+                : (lang === "id" ? "Lupa password?" : "Forgot password?")}
+            </button>
+          </div>
+          {resendMsg && <div className={styles.success}>{resendMsg}</div>}
           {error && <div className={styles.error}>{error}</div>}
           <button type="submit" className="btn" style={{ width: "100%", padding: 14, marginTop: 4 }} disabled={loading}>
             {loading ? <div className="spinner" /> : (lang === "id" ? "Masuk" : "Login")}

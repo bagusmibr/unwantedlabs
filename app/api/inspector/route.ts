@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { getAdminDb } from "@/lib/firebase-admin";
+import { rateLimited, safeDocId } from "@/lib/rate-limit";
+
+// Vercel Hobby memotong fungsi di 10 detik; anggaran internal di bawah dibuat
+// muat di situ. Di paket Pro angka ini yang berlaku.
+export const maxDuration = 30;
 
 const UA        = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const UA_MOBILE = "okhttp/3.14.9";
@@ -79,11 +85,12 @@ function parseFPS(buf: Uint8Array): number | null {
 async function fetchPartial(
   url: string,
   maxBytes = 2097152,
-  extraHeaders: Record<string, string> = {}
+  extraHeaders: Record<string, string> = {},
+  budgetMs = 6000
 ): Promise<Uint8Array | null> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 14000);
+    const timer = setTimeout(() => controller.abort(), Math.max(1000, budgetMs));
     const res = await fetch(url, {
       headers: { "User-Agent": UA_MOBILE, Referer: "https://www.tiktok.com/", ...extraHeaders },
       redirect: "follow",
@@ -117,19 +124,26 @@ async function fetchPartial(
 // Uses Range requests on the REAL TikTok CDN (not third-party proxies).
 // tikcdn.io/ssstik re-encodes videos and returns wrong fps — do NOT use it.
 async function detectFPS(
-  candidates: Array<{ url: string; size?: number }>
+  candidates: Array<{ url: string; size?: number }>,
+  deadline: number
 ): Promise<number | null> {
   for (const { url, size } of candidates) {
     if (!url) continue;
+    // Berhenti begitu anggaran waktu habis: lebih baik mengembalikan fps null
+    // daripada seluruh permintaan dipotong platform di tengah jalan.
+    let left = deadline - Date.now();
+    if (left < 1500) break;
+
     // First 2MB: TikTok videos use faststart (moov at beginning)
-    const buf1 = await fetchPartial(url, 2097152, { Range: "bytes=0-2097151" });
+    const buf1 = await fetchPartial(url, 2097152, { Range: "bytes=0-2097151" }, left);
     if (buf1) {
       const fps = parseFPS(buf1);
       if (fps !== null) return fps;
     }
     // Last 2MB fallback: for non-faststart files
-    if (size && size > 2097152) {
-      const buf2 = await fetchPartial(url, 2097152, { Range: `bytes=${size - 2097152}-${size - 1}` });
+    left = deadline - Date.now();
+    if (size && size > 2097152 && left >= 1500) {
+      const buf2 = await fetchPartial(url, 2097152, { Range: `bytes=${size - 2097152}-${size - 1}` }, left);
       if (buf2) {
         const fps = parseFPS(buf2);
         if (fps !== null) return fps;
@@ -140,22 +154,41 @@ async function detectFPS(
 }
 
 // ── Gerbang & pembatas ─────────────────────────────────────────────────────
-// Setel false kalau Inspector mau dibuka untuk publik lagi (lihat catatan QC).
-const REQUIRE_LOGIN = true;
+// Inspector sengaja terbuka untuk publik: landing page menjanjikannya gratis
+// tanpa akun, dan ia umpan yang membawa orang mendaftar. Kalau suatu saat mau
+// dikunci lagi, setel true DAN ubah teks di app/page.tsx + app/inspector/page.tsx.
+const REQUIRE_LOGIN = false;
 
 const RATE_LIMIT = 15;            // permintaan
-const RATE_WINDOW_MS = 60_000;    // per menit, per user
-const hits = new Map<string, { count: number; resetAt: number }>();
+const RATE_WINDOW_MS = 60_000;    // per menit, per user/IP
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const TIME_BUDGET_MS = 8_500;     // sisakan ruang sebelum batas fungsi
 
-function rateLimited(key: string): boolean {
-  const now = Date.now();
-  const cur = hits.get(key);
-  if (!cur || now > cur.resetAt) {
-    hits.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
+/** Metadata video TikTok praktis tidak berubah, jadi hasilnya layak disimpan.
+ *  Ini juga meredam beban ke tikwm.com yang bisa memblokir IP Vercel. */
+async function readCache(videoId: string): Promise<Record<string, unknown> | null> {
+  try {
+    const adminDb = await getAdminDb();
+    const snap = await adminDb.collection("inspectorCache").doc(safeDocId(videoId)).get();
+    const data = snap.data();
+    if (!data || typeof data.cachedAt !== "number") return null;
+    if (Date.now() - data.cachedAt > CACHE_TTL_MS) return null;
+    return (data.payload as Record<string, unknown>) ?? null;
+  } catch {
+    return null;
   }
-  cur.count += 1;
-  return cur.count > RATE_LIMIT;
+}
+
+async function writeCache(videoId: string, payload: Record<string, unknown>): Promise<void> {
+  try {
+    const adminDb = await getAdminDb();
+    await adminDb
+      .collection("inspectorCache")
+      .doc(safeDocId(videoId))
+      .set({ cachedAt: Date.now(), payload });
+  } catch (e) {
+    console.error("inspector cache write error:", e);
+  }
 }
 
 /** Hanya izinkan URL TikTok yang benar — mencegah endpoint dipakai sebagai proxy. */
@@ -188,8 +221,9 @@ export async function GET(req: NextRequest) {
   const rateKey =
     user?.uid ||
     req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+    req.headers.get("x-real-ip") ||
     "anon";
-  if (rateLimited(rateKey)) {
+  if (await rateLimited(rateKey, RATE_LIMIT, RATE_WINDOW_MS)) {
     return NextResponse.json(
       { ok: false, error: "Terlalu banyak permintaan. Coba lagi sebentar lagi." },
       { status: 429 }
@@ -206,6 +240,13 @@ export async function GET(req: NextRequest) {
   const videoIdMatch = url.match(/video\/(\d+)/);
   const videoId = videoIdMatch?.[1] ?? null;
 
+  if (videoId) {
+    const cached = await readCache(videoId);
+    if (cached) return NextResponse.json({ ok: true, data: cached, cached: true });
+  }
+
+  const deadline = Date.now() + TIME_BUDGET_MS;
+
   try {
     // ── Phase 1: run ALL metadata sources in parallel ─────────────────────
     const scraperPromise = (async () => {
@@ -216,7 +257,7 @@ export async function GET(req: NextRequest) {
 
     const tikwmPromise = fetch(
       `https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&count=1&cursor=0&web=1&hd=1`,
-      { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(8000) }
+      { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(5000) }
     ).then(r => r.json()).catch(() => null);
 
     // ── Creator stats: tikwm user info (might work on Vercel IPs) ──────────
@@ -224,7 +265,7 @@ export async function GET(req: NextRequest) {
     const creatorStatsPromise = authorIdFromUrl
       ? fetch(
           `https://www.tikwm.com/api/user/info/?user_id=@${authorIdFromUrl}&web=1`,
-          { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(6000) }
+          { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(4000) }
         ).then(r => r.json()).catch(() => null)
       : Promise.resolve(null);
 
@@ -247,7 +288,7 @@ export async function GET(req: NextRequest) {
           .filter((u: string) => u.includes("api.tiktokv.com") || u.includes("tiktokcdn.com") || u.includes("byteicdn.com"))
           .map((u: string) => ({ url: u, size }));
       });
-      return candidates.length > 0 ? detectFPS(candidates) : null;
+      return candidates.length > 0 ? detectFPS(candidates, deadline) : null;
     }).catch(() => null);
 
     // ── Wait for everything ───────────────────────────────────────────────
@@ -345,9 +386,7 @@ export async function GET(req: NextRequest) {
       erBreakdown = { likesRate, commentsRate, sharesRate, favoritesRate, downloadsRate };
     }
 
-    return NextResponse.json({
-      ok: true,
-      data: {
+    const payload = {
         title:            desc             || oData?.title          || null,
         author_name:      author.nickname  || oData?.author_name    || null,
         author_url:       oData?.author_url || null,
@@ -381,9 +420,16 @@ export async function GET(req: NextRequest) {
           videoCount,      // null when tikwm is unavailable
           totalLikes,      // null when tikwm is unavailable
         },
-      },
-    });
+    };
+
+    // Tulis cache tanpa menahan respons.
+    if (videoId) void writeCache(videoId, payload);
+
+    return NextResponse.json({ ok: true, data: payload });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: (e as Error).message || "Gagal fetch" }, { status: 500 });
+    // Detail hanya untuk log server — pesan asli bisa memuat URL CDN internal
+    // dan jejak kegagalan library pihak ketiga.
+    console.error("inspector error:", e);
+    return NextResponse.json({ ok: false, error: "Gagal mengambil data video." }, { status: 500 });
   }
 }

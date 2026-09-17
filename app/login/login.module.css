@@ -161,3 +161,36 @@
   font-size: 8px;
   color: rgba(255,255,255,0.2);
 }
+
+/* ── Lupa password ────────────────────────────────────────────────────────── */
+.forgotRow {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 12px;
+}
+.forgotLink {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.forgotLink:hover:not(:disabled) { color: #fff; border-bottom-color: rgba(255,255,255,0.3); }
+.forgotLink:disabled { opacity: 0.5; cursor: default; }
+
+/* Kelas ini dirujuk halaman register tapi belum pernah ada isinya. */
+.success {
+  color: #4caf50;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(76,175,80,0.25);
+  background: rgba(76,175,80,0.06);
+}

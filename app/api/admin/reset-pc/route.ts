@@ -21,6 +21,13 @@ export async function POST(req: NextRequest) {
       await Promise.all(snap.docs.map((d) => d.ref.delete()));
     }
 
+    // Ringkasan di dokumen user harus ikut dikosongkan, kalau tidak panel
+    // masih menampilkan IP lama sampai user itu login lagi.
+    await userRef.set(
+      { deviceCount: 0, attemptCount: 0, devices: [], pcResetAt: new Date(), pcResetBy: admin.email || "admin" },
+      { merge: true }
+    );
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("admin/reset-pc error:", e);

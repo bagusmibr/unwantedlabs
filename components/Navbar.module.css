@@ -94,11 +94,29 @@
 .authLink:hover { color: #fff; border-bottom-color: rgba(255,255,255,0.3); text-decoration: none; }
 
 .userMenu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Pemicu menu adalah <button> sungguhan: bisa dijangkau Tab, punya
+   aria-expanded, dan menutup lewat Escape. */
+.userTrigger {
   display: flex;
   align-items: center;
   gap: 10px;
+  background: none;
+  border: none;
+  padding: 0;
   cursor: pointer;
-  position: relative;
+  font-family: inherit;
+}
+
+/* Penahan ruang selagi status dari server belum tiba, supaya navbar tidak
+   melompat dari tombol "Masuk" ke nama pengguna. */
+.authPlaceholder {
+  width: 120px;
+  height: 28px;
 }
 
 .avatar {
@@ -113,7 +131,7 @@
   color: rgba(255,255,255,0.7);
   transition: border-color 0.2s;
 }
-.userMenu:hover .avatar { border-color: rgba(255,255,255,0.6); }
+.userTrigger:hover .avatar { border-color: rgba(255,255,255,0.6); }
 
 .userName {
   font-size: 9px;
@@ -180,6 +198,7 @@
   .links { display: none; }
   .userName { display: none; }
   .logoSub { display: none; }
+  .authPlaceholder { width: 60px; }
 }
 
 /* Language toggle */

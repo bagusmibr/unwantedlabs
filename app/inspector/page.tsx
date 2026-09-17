@@ -134,19 +134,22 @@ export default function InspectorPage() {
     const vid = extractVideoId(url);
     setLoading(true);
 
-    pushLog({ type: "info",    text: id ? "Mengambil data video..." : "Fetching video data..." });
-    await new Promise(r => setTimeout(r, 300));
-    if (vid) pushLog({ type: "data",    text: `Data fetched. ID: ${vid}` });
-    await new Promise(r => setTimeout(r, 200));
-    pushLog({ type: "data",    text: "Source: TikWM + TikTok Mobile API" });
-    await new Promise(r => setTimeout(r, 400));
-    pushLog({ type: "info",    text: id ? "Mendeteksi kualitas & framerate..." : "Detecting quality & framerate..." });
+    // Log ini melaporkan apa yang BENAR-BENAR terjadi. Versi sebelumnya
+    // mencetak "Data fetched" sebelum fetch dijalankan dan menambah ~1,2 detik
+    // jeda buatan — alat terasa lambat, dan lognya berbohong saat gagal.
+    pushLog({ type: "info", text: id ? "Mengambil data video..." : "Fetching video data..." });
+    if (vid) pushLog({ type: "data", text: `Video ID: ${vid}` });
 
     try {
       const res = await fetch(`/api/inspector?url=${encodeURIComponent(url)}`);
       const data = await res.json();
-      if (!data.ok) throw new Error(data.error || "Gagal");
-      await new Promise(r => setTimeout(r, 300));
+      if (!data.ok) throw new Error(data.error || (id ? "Gagal mengambil metadata." : "Failed to fetch metadata."));
+      pushLog({
+        type: "data",
+        text: data.cached
+          ? (id ? "Sumber: cache (maks. 6 jam)" : "Source: cache (max 6h)")
+          : "Sumber: TikWM + TikTok Mobile API",
+      });
       pushLog({ type: "success", text: id ? "Analisis selesai!" : "Analysis complete!" });
       setMeta(data.data);
     } catch (e: unknown) {

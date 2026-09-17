@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Mesin MP4 disalin apa adanya dan tidak boleh diubah gaya penulisannya.
+    // Ia dikirim ke browser sebagai teks lewat /api/engine, bukan di-bundel.
+    "engine/**",
   ]),
 ]);
 

@@ -20,7 +20,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 hari
+    // 14 hari adalah batas maksimum session cookie Firebase. Dinaikkan dari 5
+    // hari karena tidak ada mekanisme perpanjangan: pelanggan aktif sebelumnya
+    // dikeluarkan setiap 5 hari tanpa alasan yang terlihat.
+    const expiresIn = 60 * 60 * 24 * 14 * 1000;
     const sessionCookie = await adminAuth.createSessionCookie(token, { expiresIn });
 
     const adminStatus = isAdmin(decoded.email);
@@ -44,7 +47,7 @@ export async function POST(req: Request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 5,
+      maxAge: 60 * 60 * 24 * 14,
       path: "/",
     });
     return res;

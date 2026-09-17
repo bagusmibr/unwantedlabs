@@ -1,26 +1,30 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import styles from "./admin.module.css";
+import { FEATURE_LABEL, NO_ACCESS, type Access, type Feature } from "@/lib/access";
+import { EMPTY_PRICING, type PricingShape, type ProductPricing } from "@/lib/pricing";
 
 interface Device {
-  fingerprint: string;
+  id: string;
   ip: string;
   userAgent: string;
   firstSeen: { _seconds: number } | null;
   lastSeen: { _seconds: number } | null;
 }
 interface UserRow {
-  uid: string; name: string; email: string; hasAccess: boolean;
+  uid: string; name: string; email: string;
+  /** Akses per produk, sudah dihitung server termasuk kompatibilitas mundur. */
+  access?: Access;
   accessGrantedAt?: { _seconds: number } | null;
+  analyticsGrantedAt?: { _seconds: number } | null;
   createdAt?: { _seconds: number } | null;
   devices?: Device[];
+  deviceCount?: number;
+  /** Jumlah komputer berbeda yang ditolak karena kuota sudah penuh.
+   *  Inilah sinyal akun dibagikan — "Jumlah PC" selalu maksimal 1. */
+  attemptCount?: number;
 }
-interface Pricing {
-  normalPrice: number; discountPrice: number; discountActive: boolean;
-  discountLabel: string; waNumber: string;
-}
-
 function Toast({ msg, type, onClose }: { msg: string; type: "success" | "error"; onClose: () => void }) {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
   return <div className={`toast ${type === "error" ? "toast-error" : ""}`}>{msg}</div>;
@@ -39,15 +43,21 @@ export default function AdminPage() {
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
-  const [pricing, setPricing] = useState<Pricing>({ normalPrice: 0, discountPrice: 0, discountActive: false, discountLabel: "", waNumber: "" });
+  const [pricing, setPricing] = useState<PricingShape>(EMPTY_PRICING);
+
+  /** Ubah satu field pada satu produk tanpa menyentuh produk lainnya. */
+  function setProduct(key: "mp4" | "analytics", patch: Partial<ProductPricing>) {
+    setPricing((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+  }
   const [pricingLoading, setPricingLoading] = useState(false);
 
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   function showToast(msg: string, type: "success" | "error") { setToast({ msg, type }); }
 
-  async function loadUsers() {
-    setLoading(true);
+  // Tidak ada setState sinkron di sini: state `loading` memang sudah true
+  // sejak awal, jadi pemuatan pertama tidak perlu menyalakannya lagi.
+  const loadUsers = useCallback(async () => {
     try {
       const d = await fetch("/api/admin/users").then((r) => r.json());
       if (d.ok) {
@@ -59,19 +69,34 @@ export default function AdminPage() {
       }
     } catch { showToast("Gagal memuat data.", "error"); setIsAdmin(false); }
     setLoading(false);
-  }
-
-  useEffect(() => {
-    loadUsers();
-    fetch("/api/admin/pricing").then((r) => r.json()).then((d) => d.ok && d.data && setPricing(d.data)).catch(() => {});
   }, []);
 
-  async function toggleAccess(uid: string, grant: boolean) {
-    setActionLoading(uid + "_a");
+  const refresh = useCallback(() => {
+    setLoading(true);
+    void loadUsers();
+  }, [loadUsers]);
+
+  useEffect(() => {
+    // Dibungkus fungsi async (pola yang dianjurkan React untuk kerja async di
+    // efek): tidak ada setState yang jalan sebelum fetch pertama selesai.
+    void (async () => { await loadUsers(); })();
+    fetch("/api/admin/pricing").then((r) => r.json()).then((d) => d.ok && d.data && setPricing(d.data)).catch(() => {});
+  }, [loadUsers]);
+
+  async function toggleAccess(uid: string, feature: Feature, grant: boolean) {
+    setActionLoading(`${uid}_${feature}`);
     try {
-      const d = await fetch("/api/admin/access", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ uid, action: grant ? "grant" : "revoke" }) }).then((r) => r.json());
-      if (d.ok) { setUsers((prev) => prev.map((u) => u.uid === uid ? { ...u, hasAccess: grant } : u)); showToast(grant ? "Akses diberikan." : "Akses dicabut.", "success"); }
-      else showToast("Gagal ubah akses.", "error");
+      const d = await fetch("/api/admin/access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid, feature, action: grant ? "grant" : "revoke" }),
+      }).then((r) => r.json());
+      if (d.ok) {
+        // Server mengembalikan objek access hasil akhirnya — dipakai apa adanya
+        // supaya tampilan tidak pernah beda dengan isi database.
+        setUsers((prev) => prev.map((u) => (u.uid === uid ? { ...u, access: d.access ?? u.access } : u)));
+        showToast(`${FEATURE_LABEL[feature]} ${grant ? "diaktifkan" : "dicabut"}.`, "success");
+      } else showToast("Gagal ubah akses.", "error");
     } catch { showToast("Error jaringan.", "error"); }
     setActionLoading(null);
   }
@@ -81,7 +106,12 @@ export default function AdminPage() {
     setActionLoading(uid + "_pc");
     try {
       const d = await fetch("/api/admin/reset-pc", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ uid }) }).then((r) => r.json());
-      if (d.ok) showToast("PC berhasil direset.", "success"); else showToast("Gagal reset PC.", "error");
+      if (d.ok) {
+        showToast("PC berhasil direset.", "success");
+        // Tanpa ini, kolom perangkat masih menampilkan IP lama dan kamu
+        // akan menekan tombolnya dua kali karena ragu.
+        await loadUsers();
+      } else showToast("Gagal reset PC.", "error");
     } catch { showToast("Error jaringan.", "error"); }
     setActionLoading(null);
   }
@@ -97,11 +127,14 @@ export default function AdminPage() {
 
   const filtered = users.filter((u) => {
     const matchSearch = !search || u.name?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === "all" || (filter === "active" && u.hasAccess) || (filter === "inactive" && !u.hasAccess);
+    const any = (u.access ?? NO_ACCESS).mp4 || (u.access ?? NO_ACCESS).analytics;
+    const matchFilter = filter === "all" || (filter === "active" && any) || (filter === "inactive" && !any);
     return matchSearch && matchFilter;
   });
 
-  const totalActive = users.filter((u) => u.hasAccess).length;
+  const totalMp4 = users.filter((u) => (u.access ?? NO_ACCESS).mp4).length;
+  const totalAnalytics = users.filter((u) => (u.access ?? NO_ACCESS).analytics).length;
+  const totalNone = users.filter((u) => !(u.access ?? NO_ACCESS).mp4 && !(u.access ?? NO_ACCESS).analytics).length;
 
   if (isAdmin === false) {
     return (
@@ -131,7 +164,7 @@ export default function AdminPage() {
               <h1 className={styles.pageHeaderTitle}>Panel Kontrol</h1>
             </div>
             <div className={styles.pageHeaderRight}>
-              <button className="btn btn-ghost" style={{ padding: "8px 16px", fontSize: 9 }} onClick={loadUsers}>
+              <button type="button" className="btn btn-ghost" style={{ padding: "8px 16px", fontSize: 9 }} onClick={refresh}>
                 Refresh
               </button>
             </div>
@@ -146,16 +179,16 @@ export default function AdminPage() {
                 <div className={styles.statV}>{users.length}</div>
               </div>
               <div className={styles.statCell}>
-                <div className={styles.statK}>Akses Aktif</div>
-                <div className={styles.statV}>{totalActive}</div>
+                <div className={styles.statK}>MP4 Aktif</div>
+                <div className={styles.statV}>{totalMp4}</div>
               </div>
               <div className={styles.statCell}>
-                <div className={styles.statK}>Belum Aktif</div>
-                <div className={styles.statV}>{users.length - totalActive}</div>
+                <div className={styles.statK}>Analytics Aktif</div>
+                <div className={styles.statV}>{totalAnalytics}</div>
               </div>
               <div className={styles.statCell}>
-                <div className={styles.statK}>Promo</div>
-                <div className={styles.statV} style={{ fontSize: 18, paddingTop: 8 }}>{pricing.discountActive ? "Aktif" : "—"}</div>
+                <div className={styles.statK}>Belum Beli</div>
+                <div className={styles.statV}>{totalNone}</div>
               </div>
             </div>
           </div>
@@ -164,8 +197,8 @@ export default function AdminPage() {
 
           {/* Tabs */}
           <div className={`${styles.tabsWrap} tabs`}>
-            <button className={`tab ${tab === "users" ? "active" : ""}`} onClick={() => setTab("users")}>Pengguna</button>
-            <button className={`tab ${tab === "pricing" ? "active" : ""}`} onClick={() => setTab("pricing")}>Harga</button>
+            <button type="button" className={`tab ${tab === "users" ? "active" : ""}`} onClick={() => setTab("users")}>Pengguna</button>
+            <button type="button" className={`tab ${tab === "pricing" ? "active" : ""}`} onClick={() => setTab("pricing")}>Harga</button>
           </div>
 
           {/* Users tab */}
@@ -176,7 +209,7 @@ export default function AdminPage() {
                 <input className={`input ${styles.filterSearch}`} placeholder="Cari nama atau email..." value={search} onChange={(e) => setSearch(e.target.value)} />
                 <div className={styles.filterBtns}>
                   {(["all", "active", "inactive"] as const).map((f) => (
-                    <button key={f} className={`${styles.filterBtn} ${filter === f ? styles.filterActive : ""}`} onClick={() => setFilter(f)}>
+                    <button type="button" key={f} className={`${styles.filterBtn} ${filter === f ? styles.filterActive : ""}`} onClick={() => setFilter(f)}>
                       {f === "all" ? "Semua" : f === "active" ? "Aktif" : "Belum"}
                     </button>
                   ))}
@@ -200,6 +233,7 @@ export default function AdminPage() {
                         <th>Bergabung</th>
                         <th>Akses Diberikan</th>
                         <th>Perangkat / IP</th>
+                        <th>PC lain coba</th>
                         <th>Aksi</th>
                       </tr>
                     </thead>
@@ -216,9 +250,17 @@ export default function AdminPage() {
                             </div>
                           </td>
                           <td>
-                            <span className={`${styles.statusBadge} ${u.hasAccess ? styles.statusBadgeActive : ""}`}>
-                              {u.hasAccess ? "Aktif" : "Belum"}
-                            </span>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+                              {(["mp4", "analytics"] as const).map((f) => (
+                                <span
+                                  key={f}
+                                  className={`${styles.statusBadge} ${(u.access ?? NO_ACCESS)[f] ? styles.statusBadgeActive : ""}`}
+                                  title={FEATURE_LABEL[f]}
+                                >
+                                  {f === "mp4" ? "MP4" : "ANALYTICS"}
+                                </span>
+                              ))}
+                            </div>
                           </td>
                           <td style={{ fontSize: 11, fontFamily: "ui-monospace, monospace" }}>{fmtDate(u.createdAt)}</td>
                           <td style={{ fontSize: 11, fontFamily: "ui-monospace, monospace" }}>{fmtDate(u.accessGrantedAt)}</td>
@@ -229,7 +271,7 @@ export default function AdminPage() {
                             ) : (
                               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                 {u.devices.map((dev, idx) => (
-                                  <div key={dev.fingerprint} style={{
+                                  <div key={dev.id} style={{
                                     padding: "6px 10px",
                                     border: `1px solid ${u.devices!.length > 1 ? "rgba(255,100,100,0.3)" : "rgba(255,255,255,0.06)"}`,
                                     background: u.devices!.length > 1 ? "rgba(255,50,50,0.04)" : "transparent",
@@ -251,19 +293,50 @@ export default function AdminPage() {
                             )}
                           </td>
                           <td>
+                            {/* Sinyal akun dibagikan: berapa komputer berbeda
+                                yang ditolak karena kuota sudah penuh. */}
+                            {u.attemptCount && u.attemptCount > 0 ? (
+                              <span
+                                title="Komputer berbeda yang ditolak karena kuota penuh"
+                                style={{
+                                  fontFamily: "ui-monospace, monospace",
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  color: "rgba(255,120,120,0.95)",
+                                  border: "1px solid rgba(255,100,100,0.3)",
+                                  background: "rgba(255,50,50,0.06)",
+                                  padding: "3px 9px",
+                                }}
+                              >
+                                {u.attemptCount}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>—</span>
+                            )}
+                          </td>
+                          <td>
                             <div className={styles.actionBtns}>
-                              {u.hasAccess ? (
-                                <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} onClick={() => toggleAccess(u.uid, false)} disabled={actionLoading === u.uid + "_a"}>
-                                  {actionLoading === u.uid + "_a" ? <div className="spinner" style={{ width: 10, height: 10 }} /> : null}
-                                  Cabut
-                                </button>
-                              ) : (
-                                <button className={`${styles.actionBtn} ${styles.actionBtnActive}`} onClick={() => toggleAccess(u.uid, true)} disabled={actionLoading === u.uid + "_a"}>
-                                  {actionLoading === u.uid + "_a" ? <div className="spinner" style={{ width: 10, height: 10 }} /> : null}
-                                  Aktifkan
-                                </button>
-                              )}
-                              <button className={styles.actionBtn} onClick={() => resetPC(u.uid)} disabled={actionLoading === u.uid + "_pc"}>
+                              {/* Satu tombol per produk — pelanggan bisa membeli
+                                  salah satu saja. */}
+                              {(["mp4", "analytics"] as const).map((f) => {
+                                const on = (u.access ?? NO_ACCESS)[f];
+                                const busy = actionLoading === `${u.uid}_${f}`;
+                                const short = f === "mp4" ? "MP4" : "Analytics";
+                                return (
+                                  <button
+                                    key={f}
+                                    type="button"
+                                    className={`${styles.actionBtn} ${on ? styles.actionBtnDanger : styles.actionBtnActive}`}
+                                    onClick={() => toggleAccess(u.uid, f, !on)}
+                                    disabled={busy}
+                                    title={`${on ? "Cabut" : "Aktifkan"} ${FEATURE_LABEL[f]}`}
+                                  >
+                                    {busy ? <div className="spinner" style={{ width: 10, height: 10 }} /> : null}
+                                    {on ? `Cabut ${short}` : `Aktifkan ${short}`}
+                                  </button>
+                                );
+                              })}
+                              <button type="button" className={styles.actionBtn} onClick={() => resetPC(u.uid)} disabled={actionLoading === u.uid + "_pc"}>
                                 {actionLoading === u.uid + "_pc" ? <div className="spinner" style={{ width: 10, height: 10 }} /> : null}
                                 Reset PC
                               </button>
@@ -281,51 +354,107 @@ export default function AdminPage() {
           {/* Pricing tab */}
           {tab === "pricing" && (
             <div className={`${styles.pricingWrap} animate-in`}>
+              {(["mp4", "analytics"] as const).map((key) => {
+                const prod = pricing[key];
+                return (
+                  <div key={key} className={styles.pricingSection}>
+                    <div className={styles.pricingSectionTitle}>Harga — {FEATURE_LABEL[key]}</div>
+                    <div className={styles.pricingFields}>
+                      <div className={styles.priceRow}>
+                        <div className="input-group">
+                          <label className="input-label" htmlFor={`${key}-normal`}>Harga Normal (Rp)</label>
+                          <input
+                            id={`${key}-normal`}
+                            className="input"
+                            type="number"
+                            placeholder="150000"
+                            value={prod.normalPrice || ""}
+                            onChange={(e) => setProduct(key, { normalPrice: Number(e.target.value) })}
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label className="input-label" htmlFor={`${key}-discount`}>Harga Diskon (Rp)</label>
+                          <input
+                            id={`${key}-discount`}
+                            className="input"
+                            type="number"
+                            placeholder="75000"
+                            value={prod.discountPrice || ""}
+                            onChange={(e) => setProduct(key, { discountPrice: Number(e.target.value) })}
+                          />
+                        </div>
+                      </div>
+                      <div className="input-group">
+                        <label className="input-label" htmlFor={`${key}-label`}>Label Diskon</label>
+                        <input
+                          id={`${key}-label`}
+                          className="input"
+                          type="text"
+                          placeholder="Promo September 50%"
+                          value={prod.discountLabel}
+                          onChange={(e) => setProduct(key, { discountLabel: e.target.value })}
+                        />
+                      </div>
+                      <div className={styles.toggleRow}>
+                        <span className={styles.toggleRowLabel}>Aktifkan Harga Diskon</span>
+                        <div
+                          className={`toggle ${prod.discountActive ? "on" : ""}`}
+                          onClick={() => setProduct(key, { discountActive: !prod.discountActive })}
+                        >
+                          <div className="toggle-thumb" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={styles.pricePreview}>
+                      <div className={styles.previewLbl}>Preview landing page</div>
+                      <div className={styles.previewPriceRow}>
+                        {prod.discountActive && prod.discountPrice > 0 && (
+                          <span className={styles.previewStrike}>Rp {prod.normalPrice.toLocaleString("id-ID")}</span>
+                        )}
+                        <span className={styles.previewMain}>
+                          Rp {(prod.discountActive && prod.discountPrice > 0 ? prod.discountPrice : prod.normalPrice).toLocaleString("id-ID")}
+                        </span>
+                        <span className={styles.previewPer}>/lifetime</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
               <div className={styles.pricingSection}>
-                <div className={styles.pricingSectionTitle}>Konfigurasi Harga</div>
+                <div className={styles.pricingSectionTitle}>Umum</div>
                 <div className={styles.pricingFields}>
-                  <div className={styles.priceRow}>
-                    <div className="input-group">
-                      <label className="input-label">Harga Normal (Rp)</label>
-                      <input className="input" type="number" placeholder="150000" value={pricing.normalPrice || ""} onChange={(e) => setPricing({ ...pricing, normalPrice: Number(e.target.value) })} />
-                    </div>
-                    <div className="input-group">
-                      <label className="input-label">Harga Diskon (Rp)</label>
-                      <input className="input" type="number" placeholder="75000" value={pricing.discountPrice || ""} onChange={(e) => setPricing({ ...pricing, discountPrice: Number(e.target.value) })} />
-                    </div>
-                  </div>
                   <div className="input-group">
-                    <label className="input-label">Label Diskon</label>
-                    <input className="input" type="text" placeholder="Promo September 50%" value={pricing.discountLabel} onChange={(e) => setPricing({ ...pricing, discountLabel: e.target.value })} />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">Nomor WhatsApp Admin</label>
-                    <input className="input" type="text" placeholder="6281234567890" value={pricing.waNumber} onChange={(e) => setPricing({ ...pricing, waNumber: e.target.value })} />
+                    <label className="input-label" htmlFor="wa-number">Nomor WhatsApp Admin</label>
+                    <input
+                      id="wa-number"
+                      className="input"
+                      type="text"
+                      placeholder="6281234567890"
+                      value={pricing.waNumber}
+                      onChange={(e) => setPricing({ ...pricing, waNumber: e.target.value })}
+                    />
                   </div>
                   <div className={styles.toggleRow}>
-                    <span className={styles.toggleRowLabel}>Aktifkan Harga Diskon</span>
-                    <div className={`toggle ${pricing.discountActive ? "on" : ""}`} onClick={() => setPricing({ ...pricing, discountActive: !pricing.discountActive })}>
+                    <span className={styles.toggleRowLabel}>
+                      Tampilkan kartu TikTok Analytics di landing page
+                    </span>
+                    <div
+                      className={`toggle ${pricing.analyticsVisible ? "on" : ""}`}
+                      onClick={() => setPricing({ ...pricing, analyticsVisible: !pricing.analyticsVisible })}
+                    >
                       <div className="toggle-thumb" />
                     </div>
                   </div>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", lineHeight: 1.7, margin: 0 }}>
+                    Biarkan mati sampai fitur Analytics benar-benar jalan. Menyalakannya
+                    sekarang berarti memajang tombol beli untuk sesuatu yang belum ada.
+                  </p>
                 </div>
               </div>
 
-              {/* Preview */}
-              <div className={styles.pricePreview}>
-                <div className={styles.previewLbl}>Preview landing page</div>
-                <div className={styles.previewPriceRow}>
-                  {pricing.discountActive && pricing.discountPrice > 0 && (
-                    <span className={styles.previewStrike}>Rp {pricing.normalPrice.toLocaleString("id-ID")}</span>
-                  )}
-                  <span className={styles.previewMain}>
-                    Rp {(pricing.discountActive && pricing.discountPrice > 0 ? pricing.discountPrice : pricing.normalPrice).toLocaleString("id-ID")}
-                  </span>
-                  <span className={styles.previewPer}>/lifetime</span>
-                </div>
-              </div>
-
-              <button className="btn" style={{ width: "100%", padding: 14 }} onClick={savePricing} disabled={pricingLoading}>
+              <button type="button" className="btn" style={{ width: "100%", padding: 14 }} onClick={savePricing} disabled={pricingLoading}>
                 {pricingLoading ? <div className="spinner" /> : "Simpan Perubahan"}
               </button>
             </div>

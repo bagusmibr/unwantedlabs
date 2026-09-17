@@ -27,6 +27,15 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          // CSP sengaja dibatasi pada direktif yang benar-benar menambah
+          // perlindungan tanpa risiko merusak halaman. script-src dan style-src
+          // TIDAK dipasang: Next menyuntikkan skrip inline, dan dashboard
+          // menjalankan engine lewat new Function() — CSP yang terpaksa memakai
+          // 'unsafe-inline' + 'unsafe-eval' hanya memberi rasa aman palsu.
+          {
+            key: "Content-Security-Policy",
+            value: "base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          },
         ],
       },
       {

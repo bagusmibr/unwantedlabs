@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 import path from "path";
 import { getSessionUser } from "@/lib/auth";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { readAccess } from "@/lib/access";
 
 /**
  * GERBANG MESIN BERBAYAR.
@@ -29,29 +30,15 @@ let cachedSource: string | null = null;
 function engineSource(): string {
   if (cachedSource) return cachedSource;
 
-  // process.cwd() menunjuk ke root fungsi di Vercel dan ke root proyek saat
-  // dev. Kandidat kedua menutup kasus monorepo/standalone output.
-  const candidates = [
-    path.join(process.cwd(), "engine"),
-    path.join(process.cwd(), "..", "engine"),
-  ];
+  // Kedua path ditulis literal dan terkurung di subfolder "engine". Ini bukan
+  // sekadar gaya: kalau nama berkasnya datang dari variabel, Turbopack menandai
+  // ini "dynamic filesystem access" dan menelusuri SELURUH proyek ke dalam
+  // fungsi — termasuk isi public/ — sehingga deploy membengkak.
+  const mp4 = readFileSync(path.join(process.cwd(), "engine", "mp4.js"), "utf8");
+  const boost = readFileSync(path.join(process.cwd(), "engine", "boost.js"), "utf8");
 
-  let lastErr: unknown = null;
-  for (const dir of candidates) {
-    try {
-      const parts = ["mp4.js", "boost.js"].map((f) =>
-        readFileSync(path.join(dir, f), "utf8")
-      );
-      cachedSource = parts.join("\n;\n");
-      return cachedSource;
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-
-  throw new Error(
-    `Sumber engine tidak ditemukan di: ${candidates.join(", ")} — ${String(lastErr)}`
-  );
+  cachedSource = `${mp4}\n;\n${boost}`;
+  return cachedSource;
 }
 
 /** Jawaban penolakan sengaja berupa JavaScript, bukan JSON, supaya pemanggil
@@ -84,8 +71,10 @@ export async function GET(req: NextRequest) {
       userRef.collection("devices").doc(deviceId).get(),
     ]);
 
-    if (userSnap.data()?.hasAccess !== true) {
-      return deny(403, "Akses belum aktif.");
+    // Engine ini milik produk MP4 Optimizer. Pelanggan yang hanya membeli
+    // TikTok Analytics tidak berhak menerimanya.
+    if (!readAccess(userSnap.data()).mp4) {
+      return deny(403, "Akses MP4 Optimizer belum aktif.");
     }
     if (!deviceSnap.exists) {
       return deny(403, "Perangkat ini tidak terdaftar untuk akun tersebut.");

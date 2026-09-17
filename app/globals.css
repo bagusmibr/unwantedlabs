@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Inter dimuat lewat next/font di app/layout.tsx (self-hosted). Jangan
+   kembalikan @import Google Fonts di sini: ia memblokir render sampai fontnya
+   selesai diunduh. */
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -9,17 +11,28 @@
   --bg3: #111;
   --ink: #fff;
   --mute: #888;
-  --faint: #444;
+  /* #444 di atas hitam hanya ~2,6:1 — di bawah ambang WCAG AA. #757575
+     mencapai ~4,5:1 tanpa mengubah karakter desainnya. */
+  --faint: #757575;
   --line: rgba(255,255,255,0.12);
   --line-soft: rgba(255,255,255,0.06);
-  --sans: 'Inter', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sans: var(--font-inter), 'Helvetica Neue', -apple-system, BlinkMacSystemFont, sans-serif;
   --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
-  --lbl-size: 9px;
+  --lbl-size: 10px;
   --lbl-spacing: 0.34em;
   --transition: 0.22s ease;
 }
 
 html { scroll-behavior: smooth; }
+
+/* ── Fokus keyboard ───────────────────────────────────────────────────────── */
+/* Sebelumnya tidak ada gaya fokus sama sekali, jadi navigasi dengan Tab tidak
+   terlihat di mana pun. :focus-visible hanya muncul untuk keyboard, bukan klik. */
+:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.input:focus-visible { outline-offset: 0; }
 
 body {
   background: var(--bg);
@@ -81,14 +94,6 @@ body {
 }
 .btn-ghost:hover:not(:disabled) { border-color: var(--ink); opacity: 1; }
 
-.btn-danger {
-  background: transparent;
-  color: var(--mute);
-  border-color: var(--line);
-  font-weight: 400;
-}
-.btn-danger:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); opacity: 1; }
-
 .btn-wa {
   background: #25d366;
   color: #000;
@@ -116,24 +121,7 @@ body {
 .input-group { display: flex; flex-direction: column; gap: 8px; }
 .input-label { font-size: var(--lbl-size); letter-spacing: var(--lbl-spacing); text-transform: uppercase; color: var(--faint); }
 
-/* ── Badge ────────────────────────────────────────────────────────────────── */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  font-size: 8px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  border: 1px solid var(--line);
-  color: var(--mute);
-}
-.badge-active { border-color: rgba(255,255,255,0.3); color: var(--ink); }
-.badge-warn { color: var(--ink); }
-.badge-free { border-color: var(--line-soft); color: var(--faint); }
-
 /* ── Table ────────────────────────────────────────────────────────────────── */
-.table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 thead th {
   font-size: 8px;
@@ -287,10 +275,6 @@ td { padding: 14px 14px 14px 0; color: var(--mute); vertical-align: middle; }
 .animate-in {
   animation: fadeUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
-.animate-fade {
-  animation: fadeIn 0.3s ease both;
-}
-
 /* Staggered */
 .stagger > * { animation: fadeUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
 .stagger > *:nth-child(1) { animation-delay: 0ms; }
@@ -300,28 +284,7 @@ td { padding: 14px 14px 14px 0; color: var(--mute); vertical-align: middle; }
 .stagger > *:nth-child(5) { animation-delay: 240ms; }
 .stagger > *:nth-child(6) { animation-delay: 300ms; }
 
-/* ── Divider ──────────────────────────────────────────────────────────────── */
-.divider-text {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: var(--lbl-size);
-  letter-spacing: var(--lbl-spacing);
-  text-transform: uppercase;
-  color: var(--faint);
-}
-.divider-text::before, .divider-text::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-
-/* ── Grid ─────────────────────────────────────────────────────────────────── */
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-
 /* ── Toggle switch ────────────────────────────────────────────────────────── */
-.toggle-wrap { display: flex; align-items: center; gap: 12px; cursor: pointer; }
 .toggle {
   width: 36px;
   height: 20px;
@@ -345,7 +308,6 @@ td { padding: 14px 14px 14px 0; color: var(--mute); vertical-align: middle; }
   transition: transform var(--transition), background var(--transition);
 }
 .toggle.on .toggle-thumb { transform: translateX(16px); background: var(--ink); }
-.toggle-lbl { font-size: var(--lbl-size); letter-spacing: var(--lbl-spacing); text-transform: uppercase; color: var(--mute); }
 
 /* ── Section gap ──────────────────────────────────────────────────────────── */
 .section { padding: 80px 0; }
@@ -361,4 +323,16 @@ td { padding: 14px 14px 14px 0; color: var(--mute); vertical-align: middle; }
 @media (max-width: 480px) {
   .stat-grid { grid-template-columns: 1fr 1fr; }
   .tab { margin-right: 20px; }
+}
+
+/* ── Gerak dikurangi ──────────────────────────────────────────────────────── */
+/* Animasi masuk, scanline dan kursor berkedip bisa memicu pusing pada sebagian
+   orang. Hormati setelan sistem mereka. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

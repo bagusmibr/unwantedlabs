@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSessionUserFromCookies } from "@/lib/auth";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { readAccess } from "@/lib/access";
 import StudioClient from "./studio-client";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ export default async function DashboardPage() {
   try {
     const adminDb = await getAdminDb();
     const snap = await adminDb.collection("users").doc(user.uid).get();
-    hasAccess = snap.data()?.hasAccess === true;
+    hasAccess = readAccess(snap.data()).mp4;
   } catch (e) {
     console.error("dashboard status error:", e);
     lookupFailed = true;

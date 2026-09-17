@@ -110,9 +110,11 @@
 
 /* Table */
 .tableWrap {
+  /* overflow: hidden memotong 6 kolom di layar HP — kolom Perangkat dan Aksi
+     jadi sama sekali tak terjangkau. */
   border: 1px solid rgba(255,255,255,0.08);
   border-top: none;
-  overflow: hidden;
+  overflow-x: auto;
 }
 .tableLoading {
   display: flex;

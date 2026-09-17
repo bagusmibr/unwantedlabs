@@ -2,14 +2,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useLang } from "@/lib/lang";
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import styles from "../login/login.module.css";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const { lang, setLang } = useLang();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -83,7 +81,7 @@ export default function RegisterPage() {
             <label className="input-label">Password</label>
             <input className="input" type="password" placeholder={lang === "id" ? "Min. 6 karakter" : "Min. 6 characters"} value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
-          {success && <div className={styles.success} style={{ color: "#4caf50", fontSize: 13, marginBottom: 12 }}>{success}</div>}
+          {success && <div className={styles.success}>{success}</div>}
           {error && <div className={styles.error}>{error}</div>}
           <button type="submit" className="btn" style={{ width: "100%", padding: 14, marginTop: 4 }} disabled={loading}>
             {loading ? <div className="spinner" /> : (lang === "id" ? "Buat Akun" : "Create Account")}

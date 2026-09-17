@@ -3,8 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/Navbar";
 import styles from "./dashboard.module.css";
 import { useLang } from "@/lib/lang";
-
-type PCStatus = { allowed: boolean; deviceCount: number; reason?: string };
+import { registerDevice, type PCStatus } from "@/lib/fingerprint";
 
 declare global {
   interface Window {
@@ -21,13 +20,31 @@ interface VideoInfo { fps: number; width: number; height: number; duration: numb
 
 type LogType = "ok" | "err" | "dim" | "normal";
 
-/** Fingerprint ini hanya metadata untuk panel admin. Identitas perangkat yang
- *  menentukan lolos/tidak diterbitkan server sebagai UUID di cookie httpOnly. */
-function getFingerprint(): string {
-  const key = [navigator.userAgent, navigator.language, screen.width, screen.height, navigator.hardwareConcurrency].join("|");
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) hash = (hash << 5) - hash + key.charCodeAt(i);
-  return Math.abs(hash).toString(16);
+/**
+ * Mesin MP4 melempar pesan dalam Bahasa Inggris dan tidak boleh diubah
+ * (disalin apa adanya). Jadi pesannya diterjemahkan di sini, bukan di sana.
+ * Yang tidak dikenali tetap ditampilkan apa adanya.
+ */
+const ENGINE_ID: Record<string, string> = {
+  "No moov box found — this is not a valid MP4/MOV file.":
+    "Kotak moov tidak ditemukan — ini bukan berkas MP4/MOV yang sah.",
+  "The moov box is too large (over 256 MB).": "Kotak moov terlalu besar (lebih dari 256 MB).",
+  "The moov box could not be read.": "Kotak moov tidak bisa dibaca.",
+  "This file has no video track.": "Berkas ini tidak punya track video.",
+  "No tracks inside moov.": "Tidak ada track di dalam moov.",
+  "No audio track. This method needs audio as the source for the second track.":
+    "Tidak ada track audio. Metode ini butuh audio sebagai sumber track kedua.",
+  "The audio sample table (stbl) could not be read.": "Tabel sampel audio (stbl) tidak bisa dibaca.",
+  "The audio sample table is incomplete.": "Tabel sampel audio tidak lengkap.",
+  "The audio track has no samples.": "Track audio tidak punya sampel.",
+  "No mdat box found. Fragmented files (fMP4) are not supported yet.":
+    "Kotak mdat tidak ditemukan. Berkas terfragmentasi (fMP4) belum didukung.",
+  "No ftyp box found.": "Kotak ftyp tidak ditemukan.",
+};
+
+function engineMsg(e: unknown, id: boolean): string {
+  const raw = (e as Error)?.message ?? "";
+  return id ? (ENGINE_ID[raw] ?? raw) : raw;
 }
 
 export default function StudioClient({
@@ -71,16 +88,11 @@ export default function StudioClient({
 
     (async () => {
       try {
-        const pcRes = await fetch("/api/user/pc-check", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fingerprint: getFingerprint() }),
-        });
-        const pc = (await pcRes.json()) as PCStatus & { ok?: boolean };
+        const pc = await registerDevice();
         if (cancelled) return;
-        if (!pcRes.ok || !pc?.ok) { setCheckError(true); return; }
+        if (!pc) { setCheckError(true); return; }
 
-        setPcStatus({ allowed: !!pc.allowed, deviceCount: pc.deviceCount ?? 0, reason: pc.reason });
+        setPcStatus(pc);
         if (!pc.allowed) return;
 
         const engRes = await fetch("/api/engine");
@@ -123,7 +135,7 @@ export default function StudioClient({
       if (!parsed.hasAudio) addLog(id ? "Tidak ada audio track — tidak bisa di-patch." : "No audio track — cannot patch.", "err");
       else if (parsed.audioTrakCount > 1) addLog(id ? "Sudah di-patch sebelumnya." : "Already patched.", "dim");
     } catch (e: unknown) {
-      addLog(`${id ? "Gagal" : "Failed"}: ${(e as Error).message}`, "err");
+      addLog(`${id ? "Gagal" : "Failed"}: ${engineMsg(e, id)}`, "err");
       setInfo(null);
     }
   }
@@ -143,7 +155,7 @@ export default function StudioClient({
       setResult({ blob, name });
       addLog(`${id ? "Selesai" : "Done"}: ${name} (${(blob.size / 1048576).toFixed(1)} MB)`, "ok");
     } catch (e: unknown) {
-      addLog(`Error: ${(e as Error).message}`, "err");
+      addLog(`Error: ${engineMsg(e, id)}`, "err");
     }
     setProcessing(false);
   }

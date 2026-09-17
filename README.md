@@ -1,37 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# UNWANTED LABS — Web
 
-## Getting Started
+Situs jualan + panel untuk **UNWANTED LABS**: MP4 Patch Engine (berbayar) dan
+Video Inspector (gratis). Next.js 16 App Router, Firebase Auth + Firestore,
+deploy di Vercel.
 
-First, run the development server:
+---
+
+## Menjalankan di lokal
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.local.example .env.local   # lalu isi nilainya
+npm run dev                        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Perintah lain:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build     # build produksi
+npm run lint      # eslint
+npx tsc --noEmit  # cek tipe
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Variabel lingkungan
 
-To learn more about Next.js, take a look at the following resources:
+Semuanya ada di `.env.local.example`. Yang wajib:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variabel | Untuk apa |
+| --- | --- |
+| `NEXT_PUBLIC_FIREBASE_*` | Konfigurasi Firebase klien (aman dibaca browser) |
+| `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | Service account untuk Admin SDK — **rahasia** |
+| `ADMIN_EMAILS` | Email yang boleh membuka `/admin`, pisahkan dengan koma |
+| `NEXT_PUBLIC_WA_NUMBER` | Nomor WhatsApp admin, tanpa `+` dan tanpa spasi |
+| `NEXT_PUBLIC_SITE_URL` | Domain produksi, dipakai metadata + `robots.txt` + `sitemap.xml` |
+| `APIFY_TOKEN` | Token Apify untuk TikTok Analytics — **rahasia**, tanpa awalan `NEXT_PUBLIC_` |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`FIREBASE_PRIVATE_KEY` disalin apa adanya dari JSON service account, termasuk
+`\n`-nya — kode sudah menormalkan tanda kutip dan escape-nya.
 
-## Deploy on Vercel
+**Menambah admin:** tambahkan emailnya ke `ADMIN_EMAILS` lalu redeploy. Tidak
+ada daftar admin di database; `lib/firebase-admin.ts` hanya membaca env ini.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# unwantedlabs
+## Peta folder
+
+```
+app/
+  page.tsx              landing (harga diambil dari /api/admin/pricing)
+  inspector/            Video Inspector — gratis, tanpa login
+  login/ register/      Firebase Auth (email/password + Google)
+  dashboard/
+    page.tsx            server component: baca hasAccess dari Firestore
+    studio-client.tsx   UI studio, memuat engine dari /api/engine
+  analytics/            TikTok Analytics (berbayar, terpisah dari MP4)
+  admin/                panel: kelola akses, lihat perangkat, atur harga
+  api/
+    engine/             ⚠ menyajikan mesin berbayar — lihat di bawah
+    auth/               buat & hapus session cookie
+    user/               status akun, pendaftaran perangkat
+    admin/              daftar user, beri/cabut akses, reset PC, harga
+    inspector/          ambil metadata TikTok + deteksi FPS
+    analytics/          TikTok Analytics — mulai run Apify, tanya hasilnya
+engine/                 mp4.js & boost.js — JANGAN pindah ke public/
+lib/                    auth, firebase, bahasa, akses per produk
+  tiktok-source.ts      SATU-SATUNYA modul yang tahu soal penyedia data
+firestore.rules         tolak semua akses klien (wajib di-deploy)
+proxy.ts                saringan cookie murah, BUKAN lapisan keamanan
+```
+
+---
+
+## Cara keamanannya bekerja
+
+Tiga lapis, dan hanya dua di antaranya yang benar-benar menjaga:
+
+1. **`proxy.ts`** — hanya mengecek cookie `session` ada atau tidak, supaya
+   pengunjung yang jelas belum login tidak membangunkan server component.
+   **Jangan pernah mengandalkan ini untuk keamanan.**
+2. **Layout server** (`app/admin/layout.tsx`, `app/dashboard/layout.tsx`) —
+   memverifikasi session cookie ke Firebase, termasuk `checkRevoked` dan status
+   verifikasi email.
+3. **Route handler** — setiap endpoint memverifikasi sendiri lewat
+   `getSessionUser()` / `requireAdmin()`.
+
+### Mesin berbayar
+
+`engine/mp4.js` dan `engine/boost.js` **tidak boleh** diletakkan di `public/`.
+Sebagai aset statis, keduanya bisa diunduh siapa pun tanpa akun — itu sama saja
+membagikan produknya gratis. Sekarang keduanya dikirim `GET /api/engine`, yang
+baru merespons kalau: sesi sah, `hasAccess === true`, dan cookie `ul_device`
+cocok dengan perangkat terdaftar user itu.
+
+`next.config.ts` punya `outputFileTracingIncludes` untuk `/api/engine` supaya
+folder `engine/` ikut ter-deploy ke fungsi Vercel. Kalau baris itu hilang,
+route-nya jalan di lokal tapi 500 di produksi.
+
+Perlu dicatat jujur: JavaScript yang jalan di browser tidak bisa dibuat mustahil
+disalin. Pelanggan yang sudah bayar tetap bisa menyimpan isinya dari DevTools.
+Yang ditutup di sini adalah pembajakan semudah membuka satu URL.
+
+### Lisensi 1 PC
+
+`POST /api/user/pc-check` menerbitkan UUID acak ke cookie `ul_device`
+(`httpOnly`) dan mendaftarkannya di `users/{uid}/devices`. Kuotanya 1. Percobaan
+dari komputer lain dicatat di `users/{uid}/deviceAttempts` dan muncul di panel
+admin sebagai kolom **PC lain coba** — itulah sinyal akun dibagikan, karena
+kolom jumlah PC selalu maksimal 1.
+
+Pelanggan yang ganti PC harus minta admin menekan **Reset PC**. Belum ada tombol
+reset mandiri.
+
+### Firestore rules
+
+Jalankan ini sekali, dan cek ulang setelah tiap perubahan di Console:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+Admin SDK melewati rules, jadi menolak semua akses klien tidak merusak apa pun.
+
+---
+
+## Yang masih terbuka
+
+- **Ganti PC mandiri** — sekarang masih manual lewat panel admin (M4 di QC).
+- **Inspector masih memakai tikwm.com**, dan tikwm sekarang memasang Cloudflare —
+  permintaan dari server dibalas halaman tantangan bot. Kalau Inspector ikut
+  gagal di produksi, pindahkan juga ke Apify seperti Analytics.
+- **Analytics bergantung pada Apify** (berbayar per pemakaian). Tiap pengambilan
+  yang tidak kena cache = satu run berbayar. Jangan jual Analytics sebagai
+  *lifetime*: pemasoknya bisa berubah harga atau berhenti kapan saja.
+- **Sesi tidak diperpanjang** — cookie berumur 14 hari (batas maksimum
+  Firebase); setelah itu pelanggan harus login lagi.
+
+---
+
+Dibuat oleh Bagus (Shifted) MIBR.

@@ -206,11 +206,45 @@
 }
 
 /* ── Pricing ──────────────────────────────────────────────────────────────── */
+/* Dua produk berdampingan; menyusun ke satu kolom di layar sempit. Kalau
+   hanya satu produk yang tampil, kartunya dibatasi lebarnya supaya tidak
+   melar memenuhi halaman. */
+.pricingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.pricingGridSingle {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
 .pricingCard {
   border: 1px solid rgba(255,255,255,0.1);
   padding: 40px;
   position: relative;
   transition: border-color 0.25s;
+  display: flex;
+  flex-direction: column;
+}
+.pricingCard:hover { border-color: rgba(255,255,255,0.2); }
+
+.pricingName {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.pricingTagline {
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 22px;
+  min-height: 2.4em;
 }
 .pricingCard:hover { border-color: rgba(255,255,255,0.2); }
 
@@ -272,6 +306,7 @@
 }
 
 .pricingList {
+  flex: 1;
   list-style: none;
   display: flex;
   flex-direction: column;

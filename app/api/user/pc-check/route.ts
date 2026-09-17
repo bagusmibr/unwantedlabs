@@ -6,12 +6,43 @@ import { getAdminDb } from "@/lib/firebase-admin";
 const DEVICE_COOKIE = "ul_device";
 const MAX_DEVICES = 1;
 
+type UserRef = FirebaseFirestore.DocumentReference;
+
 /**
  * Identitas perangkat diterbitkan SERVER (UUID acak di cookie httpOnly),
  * bukan dihitung browser. Fingerprint dari klien hanya disimpan sebagai
  * metadata informatif — ia tidak lagi menentukan lolos/tidaknya, karena
  * nilai yang dikirim klien selalu bisa dipalsukan.
  */
+
+/**
+ * Ringkasan perangkat ditulis ke dokumen user supaya panel admin cukup
+ * membaca satu koleksi. Sebelumnya panel membaca dua subkoleksi per user —
+ * hingga 400 operasi baca untuk sekali klik Refresh.
+ */
+async function syncSummary(userRef: UserRef) {
+  const [devSnap, attSnap] = await Promise.all([
+    userRef.collection("devices").get(),
+    userRef.collection("deviceAttempts").get(),
+  ]);
+
+  const devices = devSnap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ip: data.ip ?? "—",
+      userAgent: data.userAgent ?? "",
+      firstSeen: data.firstSeen ?? null,
+      lastSeen: data.lastSeen ?? null,
+    };
+  });
+
+  await userRef.set(
+    { deviceCount: devices.length, attemptCount: attSnap.size, devices },
+    { merge: true }
+  );
+}
+
 export async function POST(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
@@ -55,6 +86,7 @@ export async function POST(req: NextRequest) {
     // Perangkat yang sudah terdaftar → izinkan, perbarui jejaknya.
     if (known && !issuedNewId) {
       await known.ref.update({ lastSeen: new Date(), ip, userAgent, fingerprint });
+      await syncSummary(userRef);
       return respond({ ok: true, allowed: true, deviceCount: existing.size });
     }
 
@@ -64,6 +96,7 @@ export async function POST(req: NextRequest) {
         .collection("deviceAttempts")
         .doc(deviceId)
         .set({ ip, userAgent, fingerprint, lastSeen: new Date() }, { merge: true });
+      await syncSummary(userRef);
 
       return respond({
         ok: true,
@@ -81,6 +114,7 @@ export async function POST(req: NextRequest) {
       firstSeen: new Date(),
       lastSeen: new Date(),
     });
+    await syncSummary(userRef);
 
     return respond({ ok: true, allowed: true, deviceCount: existing.size + 1 });
   } catch (e) {
