@@ -43,19 +43,40 @@
 
 .statGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1.4fr repeat(4, 1fr);
+  gap: 10px;
 }
 .statCell {
-  padding: 20px 0 20px 24px;
-  border-left: 1px solid rgba(255,255,255,0.06);
+  padding: 20px 22px;
+  text-align: left;
+  color: var(--ink);
+  font-family: var(--sans);
 }
-.statCell:first-child { padding-left: 0; border-left: none; }
 .statK {
   font-size: 8px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.2);
-  margin-bottom: 8px;
+  color: var(--faint);
+  margin-bottom: 12px;
+}
+/* Kartu Engine bisa diklik — membuka tab Engine. */
+.statEngine { cursor: pointer; }
+.statEngine:hover { transform: translateY(-1px); }
+.statEngineV {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.2;
+  min-height: 32px;
+}
+.statSub {
+  margin-top: 8px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
 .statV {
   font-size: 32px;
@@ -113,6 +134,8 @@
   /* overflow: hidden memotong 6 kolom di layar HP — kolom Perangkat dan Aksi
      jadi sama sekali tak terjangkau. */
   border: 1px solid rgba(255,255,255,0.08);
+  background: var(--glass);
+  padding: 16px 0 0 18px;
   border-top: none;
   overflow-x: auto;
 }
@@ -296,8 +319,11 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .statGrid { grid-template-columns: repeat(2, 1fr); }
+  .statEngine { grid-column: 1 / -1; }
+}
+@media (max-width: 768px) {
   .filterRow { flex-direction: column; }
   .filterSearch { border-right: 1px solid rgba(255,255,255,0.12) !important; border-bottom: none; }
   .filterBtns { width: 100%; border-top: none; }

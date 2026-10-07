@@ -70,6 +70,7 @@ export default function Navbar() {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/inspector", label: "Inspector" },
+    { href: "/status", label: "Status" },
   ];
 
   return (
@@ -147,7 +148,7 @@ export default function Navbar() {
           ) : (
             <>
               <Link href="/login" className={styles.authLink}>{id ? "Masuk" : "Login"}</Link>
-              <Link href="/register" className="btn" style={{ padding: "10px 20px", fontSize: 10 }}>
+              <Link href="/register" className={`btn ${styles.registerBtn}`}>
                 {id ? "Daftar" : "Sign Up"}
               </Link>
             </>

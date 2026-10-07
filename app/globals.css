@@ -21,9 +21,53 @@
   --lbl-size: 10px;
   --lbl-spacing: 0.34em;
   --transition: 0.22s ease;
+
+  /* Warna status. Satu-satunya warna di luar hitam-putih — dipakai hemat,
+     hanya untuk hal yang memang punya arti (status engine, peringatan). */
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --info: #7cb7ff;
+  --beta: #b794ff;
+  --bad: #ff6b6b;
+  --off: #8b8b8b;
+
+  /* Permukaan kaca untuk kartu */
+  --glass: rgba(255,255,255,0.022);
+  --glass-hi: rgba(255,255,255,0.045);
+  --shadow-lg: 0 30px 80px -30px rgba(0,0,0,0.9);
 }
 
 html { scroll-behavior: smooth; }
+
+/* ── Latar: grid halus + cahaya dari atas ─────────────────────────────────── */
+/* Menempel di puncak HALAMAN (bukan viewport), jadi ikut tergulir pergi dan
+   tidak membayangi konten di bawah. Grid dipudarkan dengan mask. */
+body { position: relative; }
+body::before,
+body::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: min(1100px, 130vh);
+  pointer-events: none;
+  z-index: -1;
+}
+body::before {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: center top;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 0%, transparent 75%);
+}
+body::after {
+  background:
+    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(255,255,255,0.09), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 85% 10%, rgba(124,183,255,0.035), transparent 70%);
+}
 
 /* ── Fokus keyboard ───────────────────────────────────────────────────────── */
 /* Sebelumnya tidak ada gaya fokus sama sekali, jadi navigasi dengan Tab tidak
@@ -83,7 +127,8 @@ body {
   white-space: nowrap;
   text-decoration: none;
 }
-.btn:hover:not(:disabled) { opacity: 0.8; }
+.btn:hover:not(:disabled) { opacity: 0.88; box-shadow: 0 0 0 1px rgba(255,255,255,0.25), 0 10px 30px -10px rgba(255,255,255,0.35); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
 .btn:disabled { opacity: 0.3; cursor: not-allowed; background: transparent; color: var(--faint); border-color: var(--line); }
 
 .btn-ghost {
@@ -92,7 +137,7 @@ body {
   border-color: var(--line);
   font-weight: 400;
 }
-.btn-ghost:hover:not(:disabled) { border-color: var(--ink); opacity: 1; }
+.btn-ghost:hover:not(:disabled) { border-color: var(--ink); opacity: 1; background: rgba(255,255,255,0.04); box-shadow: none; }
 
 .btn-wa {
   background: #25d366;
@@ -295,8 +340,13 @@ td { padding: 14px 14px 14px 0; color: var(--mute); vertical-align: middle; }
   transition: background var(--transition), border-color var(--transition);
   flex-shrink: 0;
   cursor: pointer;
+  padding: 0;
+  font: inherit;
 }
 .toggle.on { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.35); }
+/* Varian berbahaya: sakelar yang mematikan sesuatu untuk pelanggan. */
+.toggle.danger.on { background: color-mix(in srgb, var(--bad) 25%, transparent); border-color: var(--bad); }
+.toggle.danger.on .toggle-thumb { background: var(--bad); }
 .toggle-thumb {
   position: absolute;
   top: 3px;
@@ -308,6 +358,45 @@ td { padding: 14px 14px 14px 0; color: var(--mute); vertical-align: middle; }
   transition: transform var(--transition), background var(--transition);
 }
 .toggle.on .toggle-thumb { transform: translateX(16px); background: var(--ink); }
+
+/* ── Kartu kaca ───────────────────────────────────────────────────────────── */
+/* Dipakai di landing, admin, dan halaman status. Garis cahaya tipis di tepi
+   atas muncul saat hover — cukup untuk terasa hidup tanpa ramai. */
+.card {
+  position: relative;
+  background: linear-gradient(180deg, var(--glass-hi), var(--glass) 40%);
+  border: 1px solid var(--line-soft);
+  transition: border-color var(--transition), background var(--transition), transform var(--transition);
+}
+.card::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.card:hover { border-color: var(--line); }
+.card:hover::before { opacity: 1; }
+
+/* Label seksi dengan garis — versi global dari pola yang sudah dipakai. */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--lbl-size);
+  letter-spacing: var(--lbl-spacing);
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.eyebrow::before {
+  content: '';
+  width: 18px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
+}
 
 /* ── Section gap ──────────────────────────────────────────────────────────── */
 .section { padding: 80px 0; }

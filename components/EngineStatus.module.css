@@ -1,0 +1,128 @@
+/* Setiap kelas tone hanya mengisi --tone; elemen lain membaca variabel itu. */
+.tone_ok   { --tone: var(--ok); }
+.tone_warn { --tone: var(--warn); }
+.tone_info { --tone: var(--info); }
+.tone_beta { --tone: var(--beta); }
+.tone_bad  { --tone: var(--bad); }
+.tone_off  { --tone: var(--off); }
+
+/* ── Dot ──────────────────────────────────────────────────────────────────── */
+.dot {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--tone, var(--off));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone, var(--off)) 18%, transparent),
+              0 0 12px color-mix(in srgb, var(--tone, var(--off)) 60%, transparent);
+}
+.dotPulse { animation: dotPulse 2.2s ease-in-out infinite; }
+@keyframes dotPulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 18%, transparent), 0 0 12px color-mix(in srgb, var(--tone) 60%, transparent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--tone) 0%, transparent),  0 0 18px color-mix(in srgb, var(--tone) 80%, transparent); }
+}
+
+/* ── Pill ─────────────────────────────────────────────────────────────────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 14px 0 12px;
+  border: 1px solid color-mix(in srgb, var(--tone, #fff) 35%, transparent);
+  background: color-mix(in srgb, var(--tone, #fff) 7%, rgba(0,0,0,0.6));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  text-decoration: none;
+  color: var(--ink);
+  transition: border-color var(--transition), background var(--transition);
+  white-space: nowrap;
+}
+.pill:hover {
+  border-color: color-mix(in srgb, var(--tone, #fff) 70%, transparent);
+  background: color-mix(in srgb, var(--tone, #fff) 12%, rgba(0,0,0,0.6));
+  text-decoration: none;
+}
+.pillGhost { width: 150px; border-color: var(--line-soft); background: transparent; }
+.pillKey {
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.pillSep { width: 1px; height: 12px; background: var(--line); }
+.pillVal {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--tone, var(--ink));
+}
+
+/* ── Banner ───────────────────────────────────────────────────────────────── */
+.banner {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--tone) 10%, transparent), transparent 70%),
+    rgba(255,255,255,0.015);
+  padding: 18px 22px 18px 24px;
+  margin-bottom: 32px;
+  animation: fadeUp 0.35s ease both;
+}
+.banner::before {
+  content: '';
+  position: absolute;
+  left: -1px; top: -1px; bottom: -1px;
+  width: 2px;
+  background: var(--tone);
+  box-shadow: 0 0 14px var(--tone);
+}
+.bannerHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.bannerLabel {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--tone);
+}
+.bannerTag {
+  font-size: 8px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+  color: color-mix(in srgb, var(--tone) 85%, #fff);
+}
+.bannerTime {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--faint);
+  font-family: var(--mono);
+}
+.bannerMsg {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.75);
+  max-width: 680px;
+}
+.bannerEta {
+  margin-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+}
+.bannerEta strong { color: var(--ink); font-weight: 500; }
+.bannerNote {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11px;
+  color: var(--mute);
+  line-height: 1.6;
+}

@@ -4,6 +4,7 @@ import path from "path";
 import { getSessionUser } from "@/lib/auth";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { readAccess } from "@/lib/access";
+import { getEngineStatus } from "@/lib/engine-status-server";
 
 /**
  * GERBANG MESIN BERBAYAR.
@@ -13,7 +14,8 @@ import { readAccess } from "@/lib/access";
  * Di sini sumbernya baru dikirim setelah tiga syarat terpenuhi:
  *   1. sesi sah (cookie session terverifikasi di server),
  *   2. dokumen user punya hasAccess === true,
- *   3. cookie ul_device cocok dengan perangkat yang terdaftar di user itu.
+ *   3. cookie ul_device cocok dengan perangkat yang terdaftar di user itu,
+ *   4. status engine tidak sedang diblokir admin (lihat config/engineStatus).
  *
  * Catatan jujur: JavaScript yang berjalan di browser tidak bisa dibuat mustahil
  * disalin — pemakai yang sudah bayar selalu bisa menyimpan isinya. Yang berubah
@@ -66,9 +68,11 @@ export async function GET(req: NextRequest) {
     const adminDb = await getAdminDb();
     const userRef = adminDb.collection("users").doc(user.uid);
 
-    const [userSnap, deviceSnap] = await Promise.all([
+    const [userSnap, deviceSnap, status] = await Promise.all([
       userRef.get(),
       userRef.collection("devices").doc(deviceId).get(),
+      // Selalu segar: sakelar "blokir engine" harus berlaku seketika.
+      getEngineStatus({ fresh: true }),
     ]);
 
     // Engine ini milik produk MP4 Optimizer. Pelanggan yang hanya membeli
@@ -80,12 +84,21 @@ export async function GET(req: NextRequest) {
       return deny(403, "Perangkat ini tidak terdaftar untuk akun tersebut.");
     }
 
+    // Maintenance / offline / di-patch TikTok: pelanggan ditolak supaya tidak
+    // memproses video yang hasilnya sudah pasti gagal. Admin tetap menerima
+    // engine agar bisa menguji perbaikan sebelum status dibuka lagi.
+    const bypass = status.blockEngine && user.isAdmin;
+    if (status.blockEngine && !bypass) {
+      return deny(503, `ENGINE_BLOCKED:${status.state}`);
+    }
+
     return new NextResponse(engineSource(), {
       status: 200,
       headers: {
         "Content-Type": "application/javascript; charset=utf-8",
         "Cache-Control": "no-store, must-revalidate",
         "X-Robots-Tag": "noindex, nofollow",
+        ...(bypass ? { "X-Engine-Bypass": "admin" } : {}),
       },
     });
   } catch (e) {

@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "UNWANTED LABS — Upload Booster",
+  "short_name": "UL Booster",
+  "version": "1.0.0",
+  "description": "Menjaga kualitas & FPS asli video saat upload ke TikTok lewat browser.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "UNWANTED LABS — Upload Booster"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.tiktok.com/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.tiktok.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "permissions": ["storage", "alarms"],
+  "host_permissions": ["__API_ORIGIN__/*"],
+  "minimum_chrome_version": "111",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

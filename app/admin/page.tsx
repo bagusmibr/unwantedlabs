@@ -4,6 +4,9 @@ import Navbar from "@/components/Navbar";
 import styles from "./admin.module.css";
 import { FEATURE_LABEL, NO_ACCESS, type Access, type Feature } from "@/lib/access";
 import { EMPTY_PRICING, type PricingShape, type ProductPricing } from "@/lib/pricing";
+import { STATE_META, type EngineStatus } from "@/lib/engine-status";
+import { StatusDot, useEngineStatus } from "@/components/EngineStatus";
+import EnginePanel from "./engine-panel";
 
 interface Device {
   id: string;
@@ -36,7 +39,12 @@ function fmtDate(ts?: { _seconds: number } | null) {
 }
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"users" | "pricing">("users");
+  const [tab, setTab] = useState<"users" | "engine" | "pricing">("users");
+  // Status untuk kartu ringkasan. Setelah admin menyimpan di tab Engine, nilai
+  // dari panel dipakai langsung supaya kartu tidak menunggu polling berikutnya.
+  const { status: liveEngine } = useEngineStatus();
+  const [savedEngine, setSavedEngine] = useState<EngineStatus | null>(null);
+  const engineStatus = savedEngine ?? liveEngine;
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -53,7 +61,7 @@ export default function AdminPage() {
 
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
-  function showToast(msg: string, type: "success" | "error") { setToast({ msg, type }); }
+  const showToast = useCallback((msg: string, type: "success" | "error") => { setToast({ msg, type }); }, []);
 
   // Tidak ada setState sinkron di sini: state `loading` memang sudah true
   // sejak awal, jadi pemuatan pertama tidak perlu menyalakannya lagi.
@@ -69,7 +77,7 @@ export default function AdminPage() {
       }
     } catch { showToast("Gagal memuat data.", "error"); setIsAdmin(false); }
     setLoading(false);
-  }, []);
+  }, [showToast]);
 
   const refresh = useCallback(() => {
     setLoading(true);
@@ -174,19 +182,38 @@ export default function AdminPage() {
           {/* Stats */}
           <div className={`${styles.statsRow} stagger`}>
             <div className={styles.statGrid}>
-              <div className={styles.statCell}>
+              <button
+                type="button"
+                className={`card ${styles.statCell} ${styles.statEngine}`}
+                onClick={() => setTab("engine")}
+                title="Buka tab Engine"
+              >
+                <div className={styles.statK}>Engine</div>
+                <div className={styles.statEngineV}>
+                  {engineStatus ? (
+                    <>
+                      <StatusDot status={engineStatus} size={9} />
+                      <span>{STATE_META[engineStatus.state].label.id}</span>
+                    </>
+                  ) : "—"}
+                </div>
+                <div className={styles.statSub}>
+                  {engineStatus ? (engineStatus.blockEngine ? "Studio dikunci" : "Studio terbuka") : "Memuat"}
+                </div>
+              </button>
+              <div className={`card ${styles.statCell}`}>
                 <div className={styles.statK}>Total Akun</div>
                 <div className={styles.statV}>{users.length}</div>
               </div>
-              <div className={styles.statCell}>
+              <div className={`card ${styles.statCell}`}>
                 <div className={styles.statK}>MP4 Aktif</div>
                 <div className={styles.statV}>{totalMp4}</div>
               </div>
-              <div className={styles.statCell}>
+              <div className={`card ${styles.statCell}`}>
                 <div className={styles.statK}>Analytics Aktif</div>
                 <div className={styles.statV}>{totalAnalytics}</div>
               </div>
-              <div className={styles.statCell}>
+              <div className={`card ${styles.statCell}`}>
                 <div className={styles.statK}>Belum Beli</div>
                 <div className={styles.statV}>{totalNone}</div>
               </div>
@@ -198,6 +225,9 @@ export default function AdminPage() {
           {/* Tabs */}
           <div className={`${styles.tabsWrap} tabs`}>
             <button type="button" className={`tab ${tab === "users" ? "active" : ""}`} onClick={() => setTab("users")}>Pengguna</button>
+            <button type="button" className={`tab ${tab === "engine" ? "active" : ""}`} onClick={() => setTab("engine")}>
+              Engine
+            </button>
             <button type="button" className={`tab ${tab === "pricing" ? "active" : ""}`} onClick={() => setTab("pricing")}>Harga</button>
           </div>
 
@@ -350,6 +380,9 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+
+          {/* Engine tab */}
+          {tab === "engine" && <EnginePanel onToast={showToast} onStatus={setSavedEngine} />}
 
           {/* Pricing tab */}
           {tab === "pricing" && (

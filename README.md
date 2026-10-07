@@ -56,7 +56,8 @@ app/
     page.tsx            server component: baca hasAccess dari Firestore
     studio-client.tsx   UI studio, memuat engine dari /api/engine
   analytics/            TikTok Analytics (berbayar, terpisah dari MP4)
-  admin/                panel: kelola akses, lihat perangkat, atur harga
+  admin/                panel: kelola akses, lihat perangkat, status engine, harga
+  status/               halaman publik status engine + riwayat
   api/
     engine/             ⚠ menyajikan mesin berbayar — lihat di bawah
     auth/               buat & hapus session cookie
@@ -112,6 +113,19 @@ kolom jumlah PC selalu maksimal 1.
 
 Pelanggan yang ganti PC harus minta admin menekan **Reset PC**. Belum ada tombol
 reset mandiri.
+
+### Status engine
+
+Panel admin → tab **Engine**. Ada enam status: Online, Gangguan Sebagian, Uji
+Coba, Di-patch TikTok, Maintenance, Offline. Tiap perubahan disimpan di
+`config/engineStatus` dan dicatat di koleksi `engineStatusLog`.
+
+- Sakelar **Kunci studio** membuat `/api/engine` menolak pelanggan (503). Admin
+  tetap menerima engine supaya bisa menguji perbaikan sebelum dibuka lagi.
+- Status tampil publik di landing (pill + peringatan di atas harga), di studio
+  (banner), dan di halaman `/status` beserta riwayatnya.
+- `GET /api/status` publik dan tidak pernah memuat email admin; email pengubah
+  hanya muncul di riwayat panel admin.
 
 ### Firestore rules
 

@@ -1,0 +1,149 @@
+.tone_ok   { --tone: var(--ok); }
+.tone_warn { --tone: var(--warn); }
+.tone_info { --tone: var(--info); }
+.tone_beta { --tone: var(--beta); }
+.tone_bad  { --tone: var(--bad); }
+.tone_off  { --tone: var(--off); }
+
+.main {
+  padding: 140px 0 100px;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+.head { display: flex; flex-direction: column; gap: 14px; margin-bottom: 36px; }
+.title { font-size: clamp(28px, 4vw, 40px); font-weight: 200; letter-spacing: -0.02em; }
+.sub { font-size: 13px; color: var(--mute); line-height: 1.75; max-width: 520px; }
+
+/* ── Kartu status besar ───────────────────────────────────────────────────── */
+.hero {
+  padding: 32px;
+  border-color: color-mix(in srgb, var(--tone, #fff) 30%, transparent);
+  background:
+    radial-gradient(ellipse 70% 120% at 0% 0%, color-mix(in srgb, var(--tone, #fff) 12%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--glass-hi), var(--glass));
+  margin-bottom: 56px;
+}
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.heroTop { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.heroState {
+  font-size: clamp(24px, 3.4vw, 32px);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  color: var(--tone);
+}
+.heroTag {
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  border: 1px solid color-mix(in srgb, var(--tone) 50%, transparent);
+  color: color-mix(in srgb, var(--tone) 80%, #fff);
+  padding: 4px 10px;
+}
+.heroMsg {
+  margin-top: 16px;
+  font-size: 15px;
+  line-height: 1.75;
+  color: rgba(255,255,255,0.8);
+  max-width: 560px;
+}
+.heroMeta {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+.heroMeta div { display: flex; flex-direction: column; gap: 6px; }
+.heroMeta span {
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.heroMeta strong { font-size: 13px; font-weight: 500; }
+
+/* ── Legend ───────────────────────────────────────────────────────────────── */
+.legendHead { margin-bottom: 20px; }
+.legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 56px;
+}
+.legendItem {
+  display: flex;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--line-soft);
+  transition: border-color var(--transition);
+}
+.legendActive {
+  border-color: color-mix(in srgb, var(--tone) 55%, transparent);
+  background: color-mix(in srgb, var(--tone) 6%, transparent);
+}
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone);
+  margin-top: 5px;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tone) 60%, transparent);
+}
+.legendLabel { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.legendDesc { font-size: 11px; color: var(--mute); line-height: 1.6; }
+
+/* ── Timeline ─────────────────────────────────────────────────────────────── */
+.empty { font-size: 12px; color: var(--faint); margin-bottom: 56px; }
+.timeline {
+  list-style: none;
+  position: relative;
+  margin-bottom: 56px;
+  padding-left: 4px;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--line);
+}
+.tlItem { display: flex; gap: 20px; padding-bottom: 24px; position: relative; }
+.tlItem:last-child { padding-bottom: 0; }
+.tlDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tone);
+  border: 2px solid #000;
+  box-sizing: content-box;
+  margin-top: 4px;
+  flex-shrink: 0;
+  position: relative;
+}
+.tlBody { flex: 1; }
+.tlHead { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.tlState { font-size: 12px; font-weight: 600; color: var(--tone); letter-spacing: 0.02em; }
+.tlTime { font-size: 11px; color: var(--faint); font-family: var(--mono); }
+.tlMsg { margin-top: 6px; font-size: 12px; color: var(--mute); line-height: 1.7; }
+
+.back { display: flex; justify-content: center; }
+
+@media (max-width: 600px) {
+  .legend { grid-template-columns: 1fr; }
+  .hero { padding: 24px; }
+  .heroMeta { gap: 24px; }
+}

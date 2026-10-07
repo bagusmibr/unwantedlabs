@@ -1,0 +1,260 @@
+.tone_ok   { --tone: var(--ok); }
+.tone_warn { --tone: var(--warn); }
+.tone_info { --tone: var(--info); }
+.tone_beta { --tone: var(--beta); }
+.tone_bad  { --tone: var(--bad); }
+.tone_off  { --tone: var(--off); }
+
+.wrap { display: flex; flex-direction: column; gap: 28px; }
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 0;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.linkBtn {
+  background: none;
+  border: none;
+  color: #fff;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.kicker {
+  font-size: 8px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ── Status sekarang ──────────────────────────────────────────────────────── */
+.now {
+  display: flex;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding: 26px 28px;
+  border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
+  background:
+    radial-gradient(ellipse 60% 140% at 0% 0%, color-mix(in srgb, var(--tone) 13%, transparent), transparent 65%),
+    var(--glass);
+}
+.nowLeft { display: flex; flex-direction: column; gap: 10px; max-width: 560px; }
+.nowState {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 26px;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  color: var(--tone);
+}
+.nowMsg { font-size: 12px; line-height: 1.7; color: rgba(255,255,255,0.65); }
+.nowMeta { display: flex; gap: 32px; align-items: flex-end; flex-wrap: wrap; }
+.nowMeta div { display: flex; flex-direction: column; gap: 6px; }
+.nowMeta span {
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.nowMeta strong { font-size: 13px; font-weight: 500; }
+.good { color: var(--ok); }
+.bad { color: var(--bad); }
+
+/* ── Layout dua kolom ─────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.sectionTitle {
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sectionTitle::after { content: ''; flex: 1; height: 1px; background: var(--line-soft); }
+
+.editor > * + .sectionTitle,
+.side > * + .sectionTitle { margin-top: 30px; }
+
+/* ── Kartu pilihan status ─────────────────────────────────────────────────── */
+.states {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.stateCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255,255,255,0.015);
+  color: var(--ink);
+  font-family: var(--sans);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+}
+.stateCard:hover { border-color: color-mix(in srgb, var(--tone) 45%, transparent); }
+.stateActive {
+  border-color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 9%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tone) 40%, transparent), 0 10px 30px -14px var(--tone);
+}
+.stateTop { display: flex; align-items: center; gap: 10px; }
+.stateDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tone) 70%, transparent);
+  flex-shrink: 0;
+}
+.stateLabel { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
+.stateNow {
+  margin-left: auto;
+  font-size: 7px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #000;
+  background: var(--tone);
+  padding: 3px 6px;
+}
+.stateDesc { font-size: 11px; line-height: 1.55; color: var(--mute); }
+.stateBlock {
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ── Form ─────────────────────────────────────────────────────────────────── */
+.field { display: flex; flex-direction: column; gap: 8px; }
+.textarea { resize: vertical; min-height: 84px; line-height: 1.6; font-family: var(--sans); }
+/* Placeholder di sini adalah kalimat bawaan — tampilkan apa adanya, bukan
+   gaya label kapital dari .input global. */
+.textarea::placeholder { text-transform: none; letter-spacing: 0; font-size: 13px; }
+.fieldHint {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--faint);
+}
+.etaRow { display: flex; gap: 8px; align-items: stretch; }
+.etaInput { color-scheme: dark; max-width: 280px; }
+
+.blockRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--line-soft);
+  transition: border-color var(--transition), background var(--transition);
+}
+.blockRowOn {
+  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
+  background: color-mix(in srgb, var(--bad) 6%, transparent);
+}
+.blockTitle { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.blockDesc { font-size: 11px; color: var(--mute); line-height: 1.6; }
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+.dirty {
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--warn);
+}
+
+/* ── Kolom samping ────────────────────────────────────────────────────────── */
+.side { position: sticky; top: 90px; }
+.previewBox {
+  padding: 20px;
+  border: 1px dashed var(--line);
+  background: rgba(0,0,0,0.35);
+}
+.previewBox > div:last-child { margin-bottom: 0; }
+.previewLbl {
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 10px;
+}
+
+.historyEmpty { font-size: 11px; color: var(--faint); }
+.history {
+  list-style: none;
+  position: relative;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+.history::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--line-soft);
+}
+.hItem { display: flex; gap: 14px; padding-bottom: 16px; position: relative; }
+.hDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tone);
+  border: 2px solid #000;
+  box-sizing: content-box;
+  margin: 3px 0 0 -2px;
+  flex-shrink: 0;
+}
+.hBody { flex: 1; min-width: 0; }
+.hHead { display: flex; align-items: center; gap: 8px; }
+.hState { font-size: 11px; font-weight: 600; color: var(--tone); }
+.hLock {
+  font-size: 7px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: 1px solid color-mix(in srgb, var(--bad) 50%, transparent);
+  color: var(--bad);
+  padding: 2px 5px;
+}
+.hTime { margin-left: auto; font-size: 10px; color: var(--faint); font-family: var(--mono); white-space: nowrap; }
+.hMsg { margin-top: 4px; font-size: 11px; color: var(--mute); line-height: 1.55; overflow-wrap: anywhere; }
+.hBy { margin-top: 3px; font-size: 10px; color: var(--faint); font-family: var(--mono); }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .side { position: static; }
+}
+@media (max-width: 520px) {
+  .states { grid-template-columns: 1fr; }
+  .now { padding: 20px; }
+}

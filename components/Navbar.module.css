@@ -9,10 +9,10 @@
 }
 
 .scrolled {
-  background: rgba(0, 0, 0, 0.92);
+  background: rgba(0, 0, 0, 0.86);
   padding: 16px 0;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
 }
 
 .inner {
@@ -92,6 +92,8 @@
   padding-bottom: 1px;
 }
 .authLink:hover { color: #fff; border-bottom-color: rgba(255,255,255,0.3); text-decoration: none; }
+
+.registerBtn { padding: 10px 20px; font-size: 10px; }
 
 .userMenu {
   position: relative;
@@ -199,6 +201,11 @@
   .userName { display: none; }
   .logoSub { display: none; }
   .authPlaceholder { width: 60px; }
+  /* Tanpa ini sisi kanan (bahasa + Masuk + Daftar) meluap keluar layar 375px. */
+  .inner { gap: 12px; }
+  .right { margin-left: auto; gap: 12px; }
+  .authLink { letter-spacing: 0.2em; }
+  .registerBtn { padding: 9px 12px; letter-spacing: 0.18em; }
 }
 
 /* Language toggle */

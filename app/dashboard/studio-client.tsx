@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import styles from "./dashboard.module.css";
 import { useLang } from "@/lib/lang";
 import { registerDevice, type PCStatus } from "@/lib/fingerprint";
+import { EngineStatusBanner, useEngineStatus } from "@/components/EngineStatus";
 
 declare global {
   interface Window {
@@ -60,6 +61,11 @@ export default function StudioClient({
   const [checkError, setCheckError] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
   const [engineError, setEngineError] = useState("");
+  /** Server menolak karena admin mengunci engine (maintenance, patched, dsb.). */
+  const [engineBlocked, setEngineBlocked] = useState(false);
+  /** Engine tetap dikirim walau terkunci, karena akun ini admin. */
+  const [adminBypass, setAdminBypass] = useState(false);
+  const { status: engineStatus } = useEngineStatus();
 
   const [file, setFile] = useState<File | null>(null);
   const [info, setInfo] = useState<VideoInfo | null>(null);
@@ -98,9 +104,16 @@ export default function StudioClient({
         const engRes = await fetch("/api/engine");
         if (cancelled) return;
         if (!engRes.ok) {
+          const body = await engRes.text().catch(() => "");
+          if (cancelled) return;
+          if (engRes.status === 503 && body.includes("ENGINE_BLOCKED")) {
+            setEngineBlocked(true);
+            return;
+          }
           setEngineError(id ? "Engine tidak bisa dimuat untuk akun ini." : "The engine could not be loaded for this account.");
           return;
         }
+        setAdminBypass(engRes.headers.get("X-Engine-Bypass") === "admin");
         const src = await engRes.text();
         if (cancelled) return;
         // Modul UMD: menempelkan ULMP4 / ULBOOST ke window saat dijalankan.
@@ -277,9 +290,38 @@ export default function StudioClient({
                 {id ? "Minta Reset PC" : "Request PC Reset"}
               </a>
             </div>
+          ) : engineBlocked ? (
+            /* ── Admin mengunci engine: tampilkan alasannya, bukan error ── */
+            <div className="animate-in">
+              <EngineStatusBanner status={engineStatus} showWhenOnline />
+              <div className={styles.noAccess}>
+                <div className={styles.noAccessLabel}>MP4 Studio</div>
+                <h2 className={styles.noAccessTitle}>{id ? "Studio Sedang Dikunci" : "Studio Is Locked"}</h2>
+                <p className={styles.noAccessDesc}>
+                  {id
+                    ? "Akses dan lisensimu tetap aman. Studio akan terbuka lagi otomatis begitu engine kembali normal — pantau perkembangannya di halaman Status."
+                    : "Your access and license are safe. The studio reopens automatically once the engine is back to normal — follow along on the Status page."}
+                </p>
+                <div className={styles.noAccessDivider} />
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <a href="/status" className="btn" style={{ padding: "14px 20px" }}>
+                    {id ? "Lihat Status" : "View Status"}
+                  </a>
+                  <a href="/dashboard" className="btn btn-ghost" style={{ padding: "14px 20px" }}>
+                    {id ? "Muat Ulang" : "Reload"}
+                  </a>
+                </div>
+              </div>
+            </div>
           ) : (
             /* ── Akses aktif + perangkat sah ── */
             <div className="animate-in">
+              <EngineStatusBanner
+                status={engineStatus}
+                note={adminBypass ? (id
+                  ? "Kamu admin — engine tetap dimuat supaya bisa menguji. Pelanggan saat ini melihat studio terkunci."
+                  : "You're an admin — the engine still loads so you can test. Customers currently see a locked studio.") : undefined}
+              />
               <div className={styles.statusBar}>
                 <div className={styles.statusDot} />
                 <span className={styles.statusText}>{id ? "Akses Aktif" : "Access Active"}</span>
