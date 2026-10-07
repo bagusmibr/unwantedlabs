@@ -425,3 +425,31 @@ td { padding: 14px 14px 14px 0; color: var(--mute); vertical-align: middle; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Kursor custom aktif ──────────────────────────────────────────────────── */
+/* Kelas dipasang oleh components/fx/CustomCursor.tsx hanya di perangkat
+   bermouse. Kolom isian tetap memakai kursor asli supaya caret terlihat. */
+.has-fx-cursor,
+.has-fx-cursor a,
+.has-fx-cursor button,
+.has-fx-cursor summary,
+.has-fx-cursor label,
+.has-fx-cursor [role] { cursor: none; }
+.has-fx-cursor input,
+.has-fx-cursor textarea,
+.has-fx-cursor select { cursor: auto; }
+
+/* Naik + memudar + blur hilang — versi CSS murni dari <Reveal>. */
+.fx-rise { animation: fxRise 1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes fxRise {
+  from { opacity: 0; transform: translateY(22px); filter: blur(8px); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* ── Menunggu intro ───────────────────────────────────────────────────────── */
+/* Animasi CSS hero ditahan selama intro landing masih diputar, lalu berjalan
+   begitu tirai terbuka. Hanya berlaku bila JS jalan (data-js). */
+html[data-js]:not([data-intro-seen]) .fx-wait-intro,
+html[data-js]:not([data-intro-seen]) .fx-wait-intro * {
+  animation-play-state: paused !important;
+}

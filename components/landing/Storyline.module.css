@@ -1,0 +1,289 @@
+.pin {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+}
+.grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+/* ── Teks langkah ─────────────────────────────────────────────────────────── */
+.copy { position: relative; }
+.dots { display: flex; gap: 8px; margin-bottom: 28px; }
+.dot { width: 28px; height: 2px; background: var(--line); transition: background 0.4s ease; }
+.dot[data-on="1"] { background: #fff; }
+.stepStack { position: relative; min-height: 220px; }
+.step { position: absolute; inset: 0; }
+/* Hanya langkah pertama terlihat di awal; sisanya dimunculkan timeline. */
+.step:not(:first-child) { opacity: 0; visibility: hidden; transform: translateY(30px); }
+.stepK { font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: 0.1em; }
+.stepT {
+  margin: 16px 0;
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+.stepD { font-size: 14px; line-height: 1.8; color: rgba(255,255,255,0.55); max-width: 420px; }
+
+/* ── Panggung adegan ──────────────────────────────────────────────────────── */
+.stage {
+  position: relative;
+  height: min(440px, 62vh);
+}
+.scene {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.scene1, .scene2 { opacity: 0; visibility: hidden; }
+.scene1 { transform: scale(0.92); }
+.scene2 { transform: translateY(30px); gap: 26px; }
+
+/* Adegan 1 — browser */
+.browser {
+  width: 100%;
+  max-width: 460px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+  box-shadow: var(--shadow-lg), 0 0 100px -40px rgba(255,255,255,0.2);
+}
+.browserBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.browserBar i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.18); }
+.url {
+  flex: 1;
+  margin-left: 12px;
+  padding: 4px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--mute);
+  background: rgba(255,255,255,0.04);
+}
+.lock { color: var(--ok); }
+.browserBody { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+.drop {
+  height: 150px;
+  border: 1px dashed rgba(255,255,255,0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  color: #000;
+  box-shadow: 0 20px 40px -12px rgba(255,255,255,0.35);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-90px) rotate(-6deg);
+}
+.fileIcon {
+  width: 18px;
+  height: 22px;
+  border: 1.5px solid #000;
+  position: relative;
+}
+.fileIcon::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 7px;
+  height: 6px;
+  border-left: 5px solid #000;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  width: 0;
+  box-sizing: content-box;
+}
+.fileName { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.fileMeta { font-family: var(--mono); font-size: 10px; opacity: 0.55; }
+.net {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.net strong { font-family: var(--mono); font-size: 12px; letter-spacing: 0.05em; color: #fff; font-weight: 500; }
+.netOk {
+  margin-left: auto;
+  color: var(--ok);
+  border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
+  padding: 3px 8px;
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Adegan 2 — kotak hitam */
+.core {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.orbit {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px dashed rgba(255,255,255,0.18);
+  animation: orbit 18s linear infinite;
+}
+.orbitB { inset: 34px; border-style: solid; border-color: rgba(255,255,255,0.08); border-top-color: rgba(255,255,255,0.6); animation-duration: 3.2s; }
+@keyframes orbit { to { transform: rotate(360deg); } }
+.ringSvg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ringTrack { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 2; }
+.ring {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  filter: drop-shadow(0 0 6px #fff);
+}
+.box {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  background: #000;
+  border: 1px solid rgba(255,255,255,0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-shadow: 0 0 40px 0 rgba(255,255,255,0.12);
+}
+.boxLbl { font-size: 7px; letter-spacing: 0.4em; color: var(--mute); }
+.boxName { font-size: 13px; letter-spacing: 0.32em; font-weight: 600; padding-left: 0.32em; }
+.boxPct { margin-top: 6px; font-family: var(--mono); font-size: 11px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.coreCaption {
+  margin-top: 26px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+.capDot { width: 3px; height: 3px; border-radius: 50%; background: var(--faint); }
+.sealed { color: var(--ok); opacity: 0; visibility: hidden; margin-left: 6px; }
+
+/* Adegan 3 — HP */
+.phone {
+  width: 168px;
+  aspect-ratio: 9 / 18.5;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 26px;
+  padding: 7px;
+  background: #050505;
+  box-shadow: 0 30px 80px -20px rgba(255,255,255,0.25);
+}
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #111;
+}
+/* "Video" abstrak: garis-garis yang bergerak mulus */
+.motion {
+  position: absolute;
+  inset: -50%;
+  background: repeating-linear-gradient(115deg, rgba(255,255,255,0.0) 0 18px, rgba(255,255,255,0.12) 18px 20px);
+  animation: motionSlide 2.4s linear infinite;
+}
+@keyframes motionSlide { to { transform: translate3d(-40px, 0, 0); } }
+.badge {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.6);
+  padding: 5px 10px;
+  background: #fff;
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+  box-shadow: 0 0 24px rgba(255,255,255,0.7);
+  opacity: 0;
+  visibility: hidden;
+}
+.uiRail { position: absolute; right: 9px; bottom: 54px; display: flex; flex-direction: column; gap: 10px; }
+.uiRail i { width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,0.25); }
+.uiCaption { position: absolute; left: 10px; right: 40px; bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+.uiCaption i { height: 5px; background: rgba(255,255,255,0.25); }
+.uiCaption i:first-child { width: 50%; background: rgba(255,255,255,0.5); }
+
+.meter { width: 100%; max-width: 360px; }
+.meterTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 10px;
+}
+.meterVal {
+  font-size: 44px;
+  font-weight: 200;
+  letter-spacing: -0.04em;
+  color: #fff;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+}
+.meterVal small { font-size: 13px; letter-spacing: 0.1em; color: var(--mute); margin-left: 6px; }
+.meterBar { height: 5px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.meterFill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255,255,255,0.4), #fff);
+  transform: scaleX(0.25);
+  transform-origin: 0 50%;
+  box-shadow: 0 0 20px rgba(255,255,255,0.6);
+}
+.meterScale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--faint);
+}
+
+/* ── Versi statis (HP) ────────────────────────────────────────────────────── */
+.static { display: grid; gap: 12px; }
+.staticCard { padding: 26px; }
+.staticTop { display: flex; justify-content: space-between; align-items: center; }
+.staticIcon { color: rgba(255,255,255,0.7); display: inline-flex; }
+.staticCard .stepT { font-size: 22px; margin: 14px 0 10px; }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; gap: 32px; }
+}

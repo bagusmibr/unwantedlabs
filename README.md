@@ -56,7 +56,7 @@ app/
     page.tsx            server component: baca hasAccess dari Firestore
     studio-client.tsx   UI studio, memuat engine dari /api/engine
   analytics/            TikTok Analytics (berbayar, terpisah dari MP4)
-  admin/                panel: kelola akses, lihat perangkat, status engine, harga
+  admin/                panel: akses, perangkat, status engine, konten, harga, grafik
   status/               halaman publik status engine + riwayat
   api/
     engine/             ⚠ menyajikan mesin berbayar — lihat di bawah
@@ -126,6 +126,42 @@ Coba, Di-patch TikTok, Maintenance, Offline. Tiap perubahan disimpan di
   (banner), dan di halaman `/status` beserta riwayatnya.
 - `GET /api/status` publik dan tidak pernah memuat email admin; email pengubah
   hanya muncul di riwayat panel admin.
+
+### Konten situs (banner & demo)
+
+Panel admin → tab **Konten**, disimpan di `config/siteContent`:
+
+- **Banner pengumuman** di puncak semua halaman yang memakai navbar. Tiga gaya
+  (Info / Promo / Peringatan), teks ID + EN, tautan opsional. Pengunjung bisa
+  menutupnya; mengubah isi pengumuman menaikkan `version` sehingga muncul lagi.
+- **Demo before/after** di landing — tampil hanya bila dinyalakan DAN kedua URL
+  video terisi. Simpan videonya di `public/demo/` (URL `/demo/after.mp4`) atau
+  di hosting mana pun (https). Catatan: browser memutar video sesuai refresh
+  rate layar, jadi di layar 60Hz 120fps tidak terlihat beda — pakai rekaman
+  slow-motion atau rekaman layar TikTok yang menampilkan label 120fps.
+
+### Efek visual & performa
+
+Semua efek ada di `components/fx/`. `useFxLevel()` memilih tingkatnya per
+perangkat:
+
+| Level | Kapan | Yang berjalan |
+| --- | --- | --- |
+| `full` | Desktop/laptop bermouse | Semua: partikel 3D, kursor custom, smooth scroll (Lenis), storytelling ter-pin (GSAP) |
+| `lite` | HP, layar sentuh, CPU/RAM lemah, hemat data | Partikel lebih sedikit, tanpa kursor custom & smooth scroll, storytelling jadi panel statis |
+| `off` | Pengguna memilih "kurangi gerakan" | Tanpa animasi besar |
+
+Aturan yang sengaja dijaga — jangan dilanggar saat menambah efek:
+
+- **Konten tidak boleh menunggu JavaScript.** Hero memakai animasi CSS
+  (`fx-rise`, `SplitText` mode CSS), bukan Motion; transisi halaman di
+  `app/template.tsx` tidak berjalan pada muatan pertama.
+- **Jangan biarkan `transform`/`filter` tertinggal di pembungkus halaman** —
+  itu membuat navbar, toast dan tombol WhatsApp ikut tergulir.
+- Three.js dimuat terpisah lewat `next/dynamic`, tidak ikut bundle awal.
+- Elemen yang punya scroll sendiri diberi `data-lenis-prevent`.
+- Intro landing hanya sekali per sesi, bisa dilewati dengan klik, dan dipaksa
+  selesai setelah 4 detik.
 
 ### Firestore rules
 

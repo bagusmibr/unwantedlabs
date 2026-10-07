@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import styles from "./Navbar.module.css";
 import { useLang } from "@/lib/lang";
+import { AnnouncementBar } from "@/components/SiteContent";
 
 type NavUser = { email: string; name: string; isAdmin: boolean };
 
@@ -75,6 +76,7 @@ export default function Navbar() {
 
   return (
     <nav className={`${styles.nav} ${scrolled ? styles.scrolled : ""}`}>
+      <div className={styles.announce}><AnnouncementBar /></div>
       <div className={`wrap ${styles.inner}`}>
         <Link href="/" className={styles.logo}>
           <Image src="/logo_small.png" alt="UNWANTED LABS" width={120} height={20} priority />

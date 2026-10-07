@@ -5,6 +5,9 @@ import styles from "./dashboard.module.css";
 import { useLang } from "@/lib/lang";
 import { registerDevice, type PCStatus } from "@/lib/fingerprint";
 import { EngineStatusBanner, useEngineStatus } from "@/components/EngineStatus";
+import { motion, AnimatePresence } from "motion/react";
+import SplitText from "@/components/fx/SplitText";
+import { PatchSteps, SuccessBurst, type PatchStep } from "./patch-fx";
 
 declare global {
   interface Window {
@@ -34,7 +37,7 @@ const ENGINE_ID: Record<string, string> = {
   "This file has no video track.": "Berkas ini tidak punya track video.",
   "No tracks inside moov.": "Tidak ada track di dalam moov.",
   "No audio track. This method needs audio as the source for the second track.":
-    "Tidak ada track audio. Metode ini butuh audio sebagai sumber track kedua.",
+    "Video ini tidak punya audio. Engine membutuhkan video yang memiliki audio.",
   "The audio sample table (stbl) could not be read.": "Tabel sampel audio (stbl) tidak bisa dibaca.",
   "The audio sample table is incomplete.": "Tabel sampel audio tidak lengkap.",
   "The audio track has no samples.": "Track audio tidak punya sampel.",
@@ -43,9 +46,16 @@ const ENGINE_ID: Record<string, string> = {
   "No ftyp box found.": "Kotak ftyp tidak ditemukan.",
 };
 
+/** Pesan engine yang menyebut detail cara kerja — versi Inggrisnya juga
+ *  diganti supaya tidak bocor ke pelanggan. */
+const ENGINE_EN: Record<string, string> = {
+  "No audio track. This method needs audio as the source for the second track.":
+    "This video has no audio. The engine needs a video with an audio track.",
+};
+
 function engineMsg(e: unknown, id: boolean): string {
   const raw = (e as Error)?.message ?? "";
-  return id ? (ENGINE_ID[raw] ?? raw) : raw;
+  return id ? (ENGINE_ID[raw] ?? raw) : (ENGINE_EN[raw] ?? raw);
 }
 
 export default function StudioClient({
@@ -73,6 +83,11 @@ export default function StudioClient({
   const [logs, setLogs] = useState<{ text: string; type: LogType }[]>([]);
   const [result, setResult] = useState<{ blob: Blob; name: string } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [steps, setSteps] = useState<PatchStep[] | null>(null);
+  /** Naik setiap kali patch selesai — memicu ledakan partikel sukses. */
+  const [burst, setBurst] = useState(0);
+  /** Naik setiap kali file dijatuhkan — memicu riak di dropzone. */
+  const [ripple, setRipple] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const termRef = useRef<HTMLDivElement>(null);
 
@@ -156,18 +171,48 @@ export default function StudioClient({
   async function runPatch() {
     if (!canPatch || !file || !info) return;
     setProcessing(true); setResult(null); setLogs([]);
-    addLog(id ? "Patch DUAL_AUDIO dimulai..." : "DUAL_AUDIO patch started...");
+    addLog(id ? "Memproses video..." : "Processing video...");
+
+    const plan: PatchStep[] = [
+      // Label sengaja umum: cara kerja engine adalah rahasia dagang, dan
+      // halaman ini dilihat setiap pelanggan.
+      { key: "layout", label: id ? "Membaca file" : "Reading file", state: "pending" },
+      { key: "moov", label: id ? "Menganalisis video" : "Analyzing video", state: "pending" },
+      { key: "build", label: id ? "Engine UNWANTED bekerja" : "UNWANTED engine at work", state: "pending" },
+      { key: "blob", label: id ? "Menyiapkan file hasil" : "Preparing output file", state: "pending" },
+    ];
+    setSteps(plan);
+    const mark = (key: string, state: PatchStep["state"], detail?: string) =>
+      setSteps((prev) => prev?.map((s) => (s.key === key ? { ...s, state, ...(detail ? { detail } : {}) } : s)) ?? null);
+
+    // Engine-nya sangat cepat (puluhan ms) — tanpa jeda minimum, keempat
+    // langkah berkedip bersamaan dan tak terbaca. Jeda ini murni tampilan;
+    // prosesnya sendiri tidak diperlambat.
+    const step = async <T,>(key: string, fn: () => T | Promise<T>, detail?: (v: T) => string): Promise<T> => {
+      mark(key, "active");
+      const [v] = await Promise.all([Promise.resolve().then(fn), new Promise((r) => setTimeout(r, 320))]);
+      mark(key, "done", detail?.(v));
+      return v;
+    };
+
+    let current = "layout";
     try {
-      const layout = await window.ULBOOST.loadLayout(file);
+      const layout = await step("layout", () => window.ULBOOST.loadLayout(file), () => `${(file.size / 1048576).toFixed(1)} MB`);
       const l = layout as { moov: { start: number; end: number } };
-      const moovBuf = new Uint8Array(await file.slice(l.moov.start, l.moov.end).arrayBuffer());
-      const r = window.ULBOOST.build(layout, moovBuf);
-      r.log.forEach((line) => addLog(line));
-      const blob = window.ULBOOST.buildBlob(file, layout, r);
+      current = "moov";
+      const moovBuf = await step("moov", async () => new Uint8Array(await file.slice(l.moov.start, l.moov.end).arrayBuffer()));
+      current = "build";
+      // r.log berisi detail teknis cara kerja engine — TIDAK ditampilkan ke
+      // pelanggan. Terminal hanya memuat pesan umum.
+      const r = await step("build", () => window.ULBOOST.build(layout, moovBuf));
+      current = "blob";
+      const blob = await step("blob", () => window.ULBOOST.buildBlob(file, layout, r), (b) => `${(b.size / 1048576).toFixed(1)} MB`);
       const name = file.name.replace(/\.[^.]+$/, "") + "_boost.mp4";
       setResult({ blob, name });
+      setBurst((n) => n + 1);
       addLog(`${id ? "Selesai" : "Done"}: ${name} (${(blob.size / 1048576).toFixed(1)} MB)`, "ok");
     } catch (e: unknown) {
+      mark(current, "error");
       addLog(`Error: ${engineMsg(e, id)}`, "err");
     }
     setProcessing(false);
@@ -206,7 +251,7 @@ export default function StudioClient({
         <div className="wrap">
           <div className={`${styles.pageHeader} animate-in`}>
             <div className={styles.pageHeaderSub}>UNWANTED LABS — Dashboard</div>
-            <h1 className={styles.pageHeaderTitle}>{userName}</h1>
+            <h1 className={styles.pageHeaderTitle}><SplitText lines={[{ text: userName }]} stagger={0.03} /></h1>
           </div>
           <div className={styles.rule} />
 
@@ -339,7 +384,7 @@ export default function StudioClient({
               {engineError && <div className={styles.pcWarning}>{engineError}</div>}
 
               <div className={styles.studioLabel}>MP4 Studio</div>
-              <h2 className={styles.studioTitle}>MP4 Patch Engine</h2>
+              <h2 className={styles.studioTitle}><SplitText lines={[{ text: "MP4 Patch Engine" }]} stagger={0.025} /></h2>
               <p className={styles.studioDesc}>
                 {id
                   ? "Proses berjalan 100% di browser — file tidak pernah meninggalkan perangkatmu."
@@ -351,9 +396,12 @@ export default function StudioClient({
                 onClick={() => { if (engineReady) fileRef.current?.click(); }}
                 onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
                 onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
-                onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+                onDrop={(e) => { e.preventDefault(); setDragging(false); setRipple((n) => n + 1); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
                 style={engineReady ? undefined : { opacity: 0.45, cursor: "not-allowed" }}
+                data-cursor={engineReady ? (id ? "Pilih" : "Browse") : undefined}
               >
+                <span className={styles.dropBorder} aria-hidden="true" />
+                {ripple > 0 && <span key={ripple} className={styles.dropRipple} aria-hidden="true" />}
                 <input ref={fileRef} type="file" accept=".mp4" style={{ display: "none" }} onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
                 {file ? (
                   <>
@@ -363,6 +411,10 @@ export default function StudioClient({
                   </>
                 ) : (
                   <>
+                    <svg className={styles.dropGlyph} viewBox="0 0 48 48" width="44" height="44" aria-hidden="true">
+                      <rect x="10" y="6" width="28" height="36" fill="none" stroke="currentColor" strokeWidth="1" />
+                      <path className={styles.dropArrow} d="M24 30V16m-6 6l6-6 6 6" fill="none" stroke="currentColor" strokeWidth="1.2" />
+                    </svg>
                     <div className={styles.dropIcon}>{id ? "Drop MP4 di sini" : "Drop MP4 here"}</div>
                     <div className={styles.dropText}>{id ? "atau klik untuk pilih file" : "or click to select a file"}</div>
                     <div className={styles.dropSub}>Format: .mp4</div>
@@ -373,13 +425,27 @@ export default function StudioClient({
               {info && (
                 <>
                   <div className={styles.infoChips}>
-                    <div className={styles.chip}>{info.width}×{info.height}</div>
-                    <div className={styles.chip}>{info.fps.toFixed(2)} fps</div>
-                    <div className={styles.chip}>{info.hasAudio ? "Audio" : "No Audio"}</div>
-                    <div className={styles.chip}>{(file!.size / 1048576).toFixed(1)} MB</div>
+                    {[
+                      { k: id ? "Resolusi" : "Resolution", v: `${info.width}×${info.height}` },
+                      { k: "Frame rate", v: `${info.fps.toFixed(2)} fps` },
+                      { k: "Audio", v: info.hasAudio ? (id ? "Ada" : "Yes") : (id ? "Tidak ada" : "None"), warn: !info.hasAudio },
+                      { k: id ? "Ukuran" : "Size", v: `${(file!.size / 1048576).toFixed(1)} MB` },
+                    ].map((c, i) => (
+                      <motion.div
+                        key={c.k}
+                        className={`${styles.chip} ${c.warn ? styles.chipWarn : ""}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.07, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        <span className={styles.chipK}>{c.k}</span>
+                        <span className={styles.chipV}>{c.v}</span>
+                      </motion.div>
+                    ))}
                     {info.audioTrakCount > 1 && (
                       <div className={`${styles.chip} ${styles.chipInfo}`}>
-                        {id ? "Sudah Di-patch" : "Already Patched"}
+                        <span className={styles.chipK}>Status</span>
+                        <span className={styles.chipV}>{id ? "Sudah Di-patch" : "Already Patched"}</span>
                       </div>
                     )}
                   </div>
@@ -394,13 +460,42 @@ export default function StudioClient({
                 </>
               )}
 
+              {steps && <PatchSteps steps={steps} />}
+
               {logs.length > 0 && (
-                <div ref={termRef} className={styles.terminal}>
+                <div ref={termRef} className={styles.terminal} data-lenis-prevent>
                   {logs.map((l, i) => (
                     <div key={i} className={`${styles.logLine} ${styles[`log_${l.type}`]}`}>{l.text}</div>
                   ))}
                 </div>
               )}
+
+              <AnimatePresence>
+                {result && (
+                  <motion.div
+                    key={result.name}
+                    className={styles.success}
+                    initial={{ opacity: 0, scale: 0.96, y: 12 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <SuccessBurst fire={burst} />
+                    <div className={styles.successMark} aria-hidden="true">
+                      <svg viewBox="0 0 40 40" width="40" height="40">
+                        <motion.circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" strokeWidth="1"
+                          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.7, ease: "easeOut" }} />
+                        <motion.path d="M12 20.5l5.5 5.5L28.5 14" fill="none" stroke="currentColor" strokeWidth="1.6"
+                          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.45, duration: 0.4 }} />
+                      </svg>
+                    </div>
+                    <div className={styles.successText}>
+                      <div className={styles.successTitle}>{id ? "File siap diunduh" : "Your file is ready"}</div>
+                      <div className={styles.successSub}>{result.name} · {(result.blob.size / 1048576).toFixed(1)} MB</div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className={styles.actions}>
                 <button
@@ -412,7 +507,7 @@ export default function StudioClient({
                   {processing ? <><div className="spinner" /> {id ? "Memproses..." : "Processing..."}</> : (id ? "PROSES VIDEO" : "PROCESS VIDEO")}
                 </button>
                 {result && (
-                  <button type="button" className="btn" onClick={downloadResult}>
+                  <button type="button" className={`btn ${styles.downloadBtn}`} onClick={downloadResult} data-cursor={id ? "Unduh" : "Save"}>
                     {id ? "Unduh" : "Download"} {result.name}
                   </button>
                 )}

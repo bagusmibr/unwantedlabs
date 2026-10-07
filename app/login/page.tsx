@@ -12,6 +12,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import AuthShell from "@/components/AuthShell";
 import styles from "./login.module.css";
 
 export default function LoginPage() {
@@ -148,6 +149,11 @@ export default function LoginPage() {
   }
 
   return (
+    <AuthShell
+      eyebrow={lang === "id" ? "Selamat datang kembali" : "Welcome back"}
+      lines={lang === "id" ? ["Masuk ke", "studio-mu."] : ["Back to", "your studio."]}
+      desc={lang === "id" ? "Lanjutkan memproses video 120fps langsung dari browser — tanpa upload, tanpa re-encode." : "Pick up where you left off — 120fps processing right in your browser, no uploads, no re-encode."}
+    >
     <div className={styles.page}>
       <div className={styles.langWrap}>
         <button className={styles.langToggle} onClick={() => setLang(lang === "id" ? "en" : "id")}>
@@ -209,5 +215,6 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+    </AuthShell>
   );
 }

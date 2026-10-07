@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useLang } from "@/lib/lang";
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import AuthShell from "@/components/AuthShell";
 import styles from "../login/login.module.css";
 
 export default function RegisterPage() {
@@ -49,6 +50,11 @@ export default function RegisterPage() {
   }
 
   return (
+    <AuthShell
+      eyebrow={lang === "id" ? "Akun baru" : "New account"}
+      lines={lang === "id" ? ["Mulai dengan", "satu akun."] : ["Start with", "one account."]}
+      desc={lang === "id" ? "Daftar gratis, lalu aktifkan MP4 Optimizer lewat admin. Satu lisensi untuk satu komputer." : "Sign up free, then activate MP4 Optimizer via the admin. One license per computer."}
+    >
     <div className={styles.page}>
       <div className={styles.langWrap}>
         <button className={styles.langToggle} onClick={() => setLang(lang === "id" ? "en" : "id")}>
@@ -93,5 +99,6 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+    </AuthShell>
   );
 }

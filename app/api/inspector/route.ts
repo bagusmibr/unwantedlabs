@@ -400,7 +400,6 @@ export async function GET(req: NextRequest) {
         width, height, duration,
         fps,           // physical FPS parsed from TikTok CDN MP4 stts
         tiktokTier,    // 120 if dual audio track (Dapur Kita trick) detected
-        hasDualAudio,  // true = second audio track present
         bitrateKbps, fileSize, codecType,
         definition: ratio,
         region, createTime, videoId,

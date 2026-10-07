@@ -264,7 +264,7 @@ export default function EnginePanel({
           {history.length === 0 ? (
             <div className={styles.historyEmpty}>Belum ada perubahan tercatat.</div>
           ) : (
-            <ol className={styles.history}>
+            <ol className={styles.history} data-lenis-prevent>
               {history.map((h) => {
                 const m = STATE_META[h.state];
                 return (

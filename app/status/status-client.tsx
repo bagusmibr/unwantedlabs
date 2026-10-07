@@ -1,4 +1,5 @@
 "use client";
+import SplitText from "@/components/fx/SplitText";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { StatusDot, useEngineStatus } from "@/components/EngineStatus";
@@ -20,7 +21,7 @@ export default function StatusClient() {
         <div className="wrap-md">
           <div className={`${styles.head} animate-in`}>
             <span className="eyebrow">{id ? "Status Sistem" : "System Status"}</span>
-            <h1 className={styles.title}>MP4 Patch Engine</h1>
+            <h1 className={styles.title}><SplitText lines={[{ text: "MP4 Patch Engine" }]} stagger={0.03} /></h1>
             <p className={styles.sub}>
               {id
                 ? "Halaman ini diperbarui otomatis. Saat TikTok mengubah sesuatu, kamu akan melihatnya di sini lebih dulu."

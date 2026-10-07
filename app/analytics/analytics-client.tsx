@@ -1,4 +1,5 @@
 "use client";
+import SplitText from "@/components/fx/SplitText";
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import { useLang } from "@/lib/lang";
@@ -280,7 +281,7 @@ export default function AnalyticsClient({
         <div className="wrap">
           <div className={`${styles.pageHeader} animate-in`}>
             <div className={styles.pageHeaderSub}>UNWANTED LABS — TikTok Analytics</div>
-            <h1 className={styles.pageHeaderTitle}>{userName}</h1>
+            <h1 className={styles.pageHeaderTitle}><SplitText lines={[{ text: userName }]} stagger={0.03} /></h1>
           </div>
           <div className={styles.rule} />
 

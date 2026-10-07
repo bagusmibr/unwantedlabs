@@ -1,58 +1,56 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import Navbar from "@/components/Navbar";
 import WaIcon from "@/components/WaIcon";
 import { EngineStatusPill, StatusDot, useEngineStatus } from "@/components/EngineStatus";
-import { useEffect, useRef, useState } from "react";
+import { BeforeAfter, useSiteContent } from "@/components/SiteContent";
+import dynamic from "next/dynamic";
+import SplitText from "@/components/fx/SplitText";
+import Scramble from "@/components/fx/Scramble";
+import Tilt from "@/components/fx/Tilt";
+import Magnetic from "@/components/fx/Magnetic";
+import { Reveal, Stagger, StaggerItem } from "@/components/fx/Reveal";
+import { CountUp, Marquee } from "@/components/fx/misc";
+import Storyline from "@/components/landing/Storyline";
+import Intro from "@/components/landing/Intro";
 import styles from "./page.module.css";
 import { useLang } from "@/lib/lang";
 import { STATE_META, statusMessage } from "@/lib/engine-status";
-
 import { EMPTY_PRICING, effectivePrice, type PricingShape } from "@/lib/pricing";
 
-function useCountUp(target: number, duration = 1200) {
-  const [val, setVal] = useState(0);
-  const ref = useRef<number>(0);
-  useEffect(() => {
-    // Nilai awal sudah 0, jadi tidak perlu setState sinkron di badan efek —
-    // itu memicu render berantai dan ditolak lint React.
-    if (target === 0) return;
-    const start = performance.now();
-    const step = (now: number) => {
-      const p = Math.min((now - start) / duration, 1);
-      const ease = 1 - Math.pow(1 - p, 3);
-      setVal(Math.round(target * ease));
-      if (p < 1) ref.current = requestAnimationFrame(step);
-    };
-    ref.current = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(ref.current);
-  }, [target, duration]);
-  return val;
+// Three.js (~150 KB gzip) dimuat terpisah setelah halaman tampil — tidak ikut
+// bundle awal, jadi tidak memperlambat munculnya konten.
+const ParticleField = dynamic(() => import("@/components/fx/ParticleField"), { ssr: false });
+
+/** Judul seksi: label terdekripsi + judul yang muncul per huruf. */
+function SectionHead({ eyebrow, title, children }: { eyebrow: string; title: string; children?: React.ReactNode }) {
+  return (
+    <div className={styles.sectionHead}>
+      <span className="eyebrow"><Scramble text={eyebrow} /></span>
+      <h2 className={styles.sectionTitle}>
+        <SplitText lines={[{ text: title }]} inView stagger={0.012} />
+      </h2>
+      {children}
+    </div>
+  );
 }
 
 export default function HomePage() {
   const { lang } = useLang();
   const id = lang === "id";
   const [pricing, setPricing] = useState<PricingShape>(EMPTY_PRICING);
-  const [visible, setVisible] = useState(false);
-  const statsRef = useRef<HTMLDivElement>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const { status } = useEngineStatus();
-
-  const total = useCountUp(visible ? 120 : 0, 1400);
+  const site = useSiteContent();
 
   useEffect(() => {
     fetch("/api/admin/pricing")
       .then((r) => r.json())
       .then((d) => { if (d?.ok && d.data) setPricing(d.data); })
       .catch(() => {});
-
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) setVisible(true); },
-      { threshold: 0.3 }
-    );
-    if (statsRef.current) obs.observe(statsRef.current);
-    return () => obs.disconnect();
   }, []);
 
   const waNumber = pricing.waNumber || process.env.NEXT_PUBLIC_WA_NUMBER || "6281234567890";
@@ -143,8 +141,8 @@ export default function HomePage() {
     {
       q: id ? "Apakah kualitas video berubah?" : "Does the video quality change?",
       a: id
-        ? "Tidak ada re-encode. Resolusi, bitrate, dan setiap frame tetap sama persis — yang diubah hanya struktur container MP4-nya."
-        : "There's no re-encode. Resolution, bitrate and every frame stay exactly the same — only the MP4 container structure changes.",
+        ? "Tidak ada re-encode. Resolusi, bitrate, dan setiap frame videomu tetap sama persis."
+        : "There's no re-encode. Resolution, bitrate and every frame of your video stay exactly the same.",
     },
     {
       q: id ? "Video seperti apa yang didukung?" : "Which videos are supported?",
@@ -178,53 +176,74 @@ export default function HomePage() {
     { platform: "YouTube", url: "https://youtube.com/@shiftedwalls", handle: "@shiftedwalls" },
   ];
 
+  const MARQUEE = id
+    ? ["120 fps", "Tanpa re-encode", "100% di browser", "Bit-identik", "Lisensi seumur hidup", "Privasi terjaga"]
+    : ["120 fps", "Zero re-encode", "100% in-browser", "Bit-identical", "Lifetime license", "Private by design"];
+
   const engineDown = !!status && status.state !== "online";
+  const demoReady = !!site?.demo.visible && !!site.demo.beforeUrl && !!site.demo.afterUrl;
 
   return (
     <>
+      <Intro />
       <Navbar />
-
-      {/* Scan line effect */}
-      <div className={styles.scanline} aria-hidden="true" />
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <section className={styles.hero}>
         <div className={styles.heroGlow} aria-hidden="true" />
+        <ParticleField className={styles.heroParticles} />
+        <div className={styles.heroVignette} aria-hidden="true" />
+
         <div className={`wrap ${styles.heroInner}`}>
-          <div className={`${styles.heroPill} animate-in`}>
+          {/* Hero memakai animasi CSS (fx-rise), bukan Motion: harus terlihat
+              begitu HTML tiba, tanpa menunggu JavaScript. fx-wait-intro
+              menahannya sampai tirai intro terbuka. */}
+          <div className={`${styles.heroPill} fx-rise fx-wait-intro`}>
             <EngineStatusPill status={status} />
           </div>
 
-          <div className={`${styles.heroLogo} animate-in`} style={{ animationDelay: "0.08s" }}>
+          <div className={`${styles.heroLogo} fx-rise fx-wait-intro`} style={{ animationDelay: "0.1s" }}>
             <Image src="/logo.png" alt="UNWANTED" width={520} height={80} priority />
+            <span className={styles.logoScan} aria-hidden="true" />
           </div>
 
-          <div className={`${styles.heroDivider} animate-in`} style={{ animationDelay: "0.15s" }}>
+          <div className={`${styles.heroDivider} fx-wait-intro`}>
             <div className={styles.heroDividerLine} />
-            <span className={styles.heroDividerText}>TikTok Studio Tool</span>
+            <span className={styles.heroDividerText}><Scramble text="TikTok Studio Tool" /></span>
             <div className={styles.heroDividerLine} />
           </div>
 
-          <h1 className={`${styles.heroTitle} animate-in`} style={{ animationDelay: "0.2s" }}>
-            {id ? <>120fps di TikTok.<br /><span>Tanpa re-encode.</span></> : <>120fps on TikTok.<br /><span>Zero re-encode.</span></>}
+          <h1 className={styles.heroTitle}>
+            <SplitText
+              waitIntro
+              delay={0.35}
+              lines={id
+                ? [{ text: "120fps di TikTok." }, { text: "Tanpa re-encode.", className: styles.shimmer }]
+                : [{ text: "120fps on TikTok." }, { text: "Zero re-encode.", className: styles.shimmer }]}
+            />
           </h1>
 
-          <p className={`${styles.heroDesc} animate-in`} style={{ animationDelay: "0.28s" }}>
+          <p className={`${styles.heroDesc} fx-rise fx-wait-intro`} style={{ animationDelay: "0.9s" }}>
             {id
               ? "Optimasi MP4 langsung di browser — tidak ada upload ke server, tidak ada frame yang disentuh. Plus Video Inspector gratis untuk membedah video TikTok."
               : "Optimize MP4s right in your browser — no server uploads, not a single frame touched. Plus a free Video Inspector to dissect any TikTok video."}
           </p>
 
-          <div className={`${styles.heroCta} animate-in`} style={{ animationDelay: "0.36s" }}>
-            <Link href="/register" className="btn">
-              {id ? "Mulai Sekarang" : "Get Started"}
-            </Link>
-            <Link href="/inspector" className="btn btn-ghost">
-              {id ? "Inspector Gratis" : "Free Inspector"}
-            </Link>
+          <div className={`${styles.heroCta} fx-rise fx-wait-intro`} style={{ animationDelay: "1.05s" }}>
+            <Magnetic>
+              <Link href="/register" className={`btn ${styles.ctaPrimary}`} data-cursor={id ? "Mulai" : "Start"}>
+                <span className={styles.ctaShine} aria-hidden="true" />
+                {id ? "Mulai Sekarang" : "Get Started"}
+              </Link>
+            </Magnetic>
+            <Magnetic>
+              <Link href="/inspector" className="btn btn-ghost">
+                {id ? "Inspector Gratis" : "Free Inspector"}
+              </Link>
+            </Magnetic>
           </div>
 
-          <div className={`${styles.heroTrust} animate-in`} style={{ animationDelay: "0.44s" }}>
+          <div className={`${styles.heroTrust} fx-rise fx-wait-intro`} style={{ animationDelay: "1.2s" }}>
             <span>{id ? "Proses lokal" : "Local processing"}</span>
             <span className={styles.heroTrustDot} />
             <span>{id ? "Bit-identik" : "Bit-identical"}</span>
@@ -238,65 +257,109 @@ export default function HomePage() {
         </a>
       </section>
 
+      {/* ── Marquee ───────────────────────────────────────────────────────── */}
+      <section className={styles.marqueeSection} aria-label={id ? "Keunggulan" : "Highlights"}>
+        <Marquee items={MARQUEE} speed={38} />
+      </section>
+
       {/* ── Stats ─────────────────────────────────────────────────────────── */}
       <section id="stats" className={`section-sm ${styles.statsSection}`}>
         <div className="wrap">
-          <div ref={statsRef} className={`${styles.statsGrid} stagger`}>
+          <Stagger className={styles.statsGrid}>
             {[
-              { k: id ? "Maks Frame Rate" : "Max Frame Rate", v: visible ? `${total}` : "—", u: "fps" },
-              { k: id ? "Data Dikirim" : "Data Sent", v: visible ? "0" : "—", u: "%" },
-              { k: id ? "Per Lisensi" : "Per License", v: visible ? "1" : "—", u: "PC" },
-              { k: "Re-encode", v: visible ? (id ? "Tidak" : "None") : "—", u: "" },
+              { k: id ? "Maks Frame Rate" : "Max Frame Rate", n: 120, u: "fps" },
+              { k: id ? "Data Dikirim" : "Data Sent", n: 0, u: "%" },
+              { k: id ? "Per Lisensi" : "Per License", n: 1, u: "PC" },
+              { k: "Re-encode", n: null, u: "", t: id ? "Tidak" : "None" },
             ].map((s) => (
-              <div key={s.k} className={`card ${styles.statCard}`}>
-                <div className={styles.statK}>{s.k}</div>
-                <div className={styles.statV}>
-                  {s.v}
-                  {s.u && <span className={styles.statU}>{s.u}</span>}
-                </div>
-              </div>
+              <StaggerItem key={s.k}>
+                <Tilt className={`card ${styles.statCard}`} max={10}>
+                  <div className={styles.statK}>{s.k}</div>
+                  <div className={styles.statV}>
+                    {s.n === null ? s.t : <CountUp to={s.n} />}
+                    {s.u && <span className={styles.statU}>{s.u}</span>}
+                  </div>
+                </Tilt>
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
+        </div>
+      </section>
+
+      {/* ── Storyline (scroll) ────────────────────────────────────────────── */}
+      <section className={styles.storySection}>
+        <div className="wrap">
+          <SectionHead
+            eyebrow={id ? "Alur kerja" : "The workflow"}
+            title={id ? "Tiga langkah. Nol upload." : "Three steps. Zero uploads."}
+          />
+          <Storyline />
         </div>
       </section>
 
       {/* ── Features ──────────────────────────────────────────────────────── */}
       <section className="section">
         <div className="wrap">
-          <div className={styles.sectionHead}>
-            <span className="eyebrow">{id ? "Fitur Utama" : "Core Features"}</span>
-            <h2 className={styles.sectionTitle}>{id ? "Semua yang kamu butuhkan, tanpa yang tidak perlu." : "Everything you need, nothing you don't."}</h2>
-          </div>
-          <div className={styles.featureGrid}>
-            {FEATURES.map((f, i) => (
-              <div key={f.title} className={`card ${styles.featureCard} animate-in`} style={{ animationDelay: `${i * 80}ms` }}>
-                <div className={styles.featureTop}>
-                  <span className={styles.featureNum}>{f.n}</span>
-                  <span className={styles.featureTag}>{f.tag}</span>
-                </div>
-                <div className={`lbl ${styles.featureLbl}`}>{f.label}</div>
-                <h3 className={styles.featureTitle}>{f.title}</h3>
-                <p className={styles.featureDesc}>{f.desc}</p>
-              </div>
+          <SectionHead
+            eyebrow={id ? "Fitur Utama" : "Core Features"}
+            title={id ? "Semua yang kamu butuhkan, tanpa yang tidak perlu." : "Everything you need, nothing you don't."}
+          />
+          <Stagger className={styles.featureGrid}>
+            {FEATURES.map((f) => (
+              <StaggerItem key={f.title}>
+                <Tilt className={`card ${styles.featureCard}`}>
+                  <div className={styles.featureTop}>
+                    <span className={styles.featureNum}>{f.n}</span>
+                    <span className={styles.featureTag}>{f.tag}</span>
+                  </div>
+                  <div className={`lbl ${styles.featureLbl}`}>{f.label}</div>
+                  <h3 className={styles.featureTitle}>{f.title}</h3>
+                  <p className={styles.featureDesc}>{f.desc}</p>
+                  <span className={styles.featureBig} aria-hidden="true">{f.n}</span>
+                </Tilt>
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </div>
       </section>
+
+      {/* ── Demo before/after (diatur admin) ──────────────────────────────── */}
+      {demoReady && (
+        <section className="section" id="demo">
+          <div className="wrap">
+            <SectionHead
+              eyebrow="Demo"
+              title={id ? "Lihat sendiri bedanya." : "See the difference yourself."}
+            />
+            <Reveal>
+              <BeforeAfter site={site} />
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       {/* ── How it works ──────────────────────────────────────────────────── */}
       <section className="section">
         <div className="wrap">
-          <div className={styles.sectionHead}>
-            <span className="eyebrow">{id ? "Cara Kerja" : "How It Works"}</span>
-            <h2 className={styles.sectionTitle}>{id ? "Dari file mentah ke 120fps dalam empat langkah." : "From raw file to 120fps in four steps."}</h2>
-          </div>
+          <SectionHead
+            eyebrow={id ? "Cara Mulai" : "Getting Started"}
+            title={id ? "Dari daftar sampai upload dalam empat langkah." : "From sign-up to upload in four steps."}
+          />
           <div className={styles.steps}>
+            <motion.span
+              className={styles.stepsLine}
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true, margin: "0px 0px -15% 0px" }}
+              transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
+              aria-hidden="true"
+            />
             {STEPS.map((s, i) => (
-              <div key={s.n} className={`${styles.step} animate-in`} style={{ animationDelay: `${i * 70}ms` }}>
+              <Reveal key={s.n} className={styles.step} delay={0.15 + i * 0.18}>
                 <div className={styles.stepNum}><span>{s.n}</span></div>
                 <h3 className={styles.stepTitle}>{s.title}</h3>
                 <p className={styles.stepDesc}>{s.desc}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -305,78 +368,92 @@ export default function HomePage() {
       {/* ── Pricing ───────────────────────────────────────────────────────── */}
       <section className="section" id="pricing">
         <div className="wrap">
-          <div className={styles.sectionHead}>
-            <span className="eyebrow">{id ? "Harga" : "Pricing"}</span>
-            <h2 className={styles.sectionTitle}>{id ? "Bayar sekali. Pakai selamanya." : "Pay once. Use forever."}</h2>
-          </div>
+          <SectionHead
+            eyebrow={id ? "Harga" : "Pricing"}
+            title={id ? "Bayar sekali. Pakai selamanya." : "Pay once. Use forever."}
+          />
 
           {/* Jujur ke calon pembeli: kalau engine sedang tidak normal, mereka
               harus tahu SEBELUM membayar. */}
           {engineDown && status && (
-            <Link href="/status" className={`${styles.engineNotice} ${styles[`tone_${STATE_META[status.state].tone}`]}`}>
-              <StatusDot status={status} size={8} />
-              <span className={styles.engineNoticeLabel}>Engine — {STATE_META[status.state].label[lang]}</span>
-              <span className={styles.engineNoticeMsg}>{statusMessage(status, lang)}</span>
-            </Link>
+            <Reveal>
+              <Link href="/status" className={`${styles.engineNotice} ${styles[`tone_${STATE_META[status.state].tone}`]}`}>
+                <StatusDot status={status} size={8} />
+                <span className={styles.engineNoticeLabel}>Engine — {STATE_META[status.state].label[lang]}</span>
+                <span className={styles.engineNoticeMsg}>{statusMessage(status, lang)}</span>
+              </Link>
+            </Reveal>
           )}
 
           {/* Satu kartu per produk. Kartu Analytics baru muncul setelah kamu
-              menyalakannya di panel admin — jangan pajang tombol beli untuk
-              sesuatu yang belum jalan. */}
+              menyalakannya di panel admin. */}
           <div className={`${styles.pricingGrid} ${PRODUCTS.length === 1 ? styles.pricingGridSingle : ""}`}>
             {PRODUCTS.map((prod, i) => {
               const p = pricing[prod.key];
               const { price, strike } = effectivePrice(p);
               const saving = strike && price ? Math.round((1 - price / strike) * 100) : 0;
               return (
-                <div key={prod.key} className={`${styles.pricingCard} ${i === 0 ? styles.pricingCardFeatured : ""} animate-in`} style={{ animationDelay: `${0.1 + i * 0.08}s` }}>
-                  {p.discountActive && (
-                    <div className={styles.discountTag}>{p.discountLabel || (id ? "Promo" : "Sale")}</div>
-                  )}
-
-                  <div className={styles.pricingName}>{prod.name}</div>
-                  <div className={styles.pricingTagline}>{prod.tagline}</div>
-
-                  <div className={styles.pricingPrice}>
-                    {strike !== null && (
-                      <span className={styles.pricingStrike}>Rp {strike.toLocaleString("id-ID")}</span>
+                <Reveal key={prod.key} delay={0.1 + i * 0.1}>
+                  <Tilt max={5} className={`${styles.pricingCard} ${i === 0 ? styles.pricingCardFeatured : ""}`}>
+                    {i === 0 && <span className={styles.pricingBorder} aria-hidden="true" />}
+                    {p.discountActive && (
+                      <div className={styles.discountTag}>{p.discountLabel || (id ? "Promo" : "Sale")}</div>
                     )}
-                    <span className={styles.pricingMain}>
-                      {price > 0 ? `Rp ${price.toLocaleString("id-ID")}` : (id ? "Hubungi Admin" : "Contact Admin")}
-                    </span>
-                    <span className={styles.pricingPer}>/lifetime</span>
-                  </div>
-                  {saving > 0 && (
-                    <div className={styles.pricingSave}>{id ? `Hemat ${saving}%` : `Save ${saving}%`}</div>
-                  )}
 
-                  <div className={styles.pricingDivider} />
+                    <div className={styles.pricingName}>{prod.name}</div>
+                    <div className={styles.pricingTagline}>{prod.tagline}</div>
 
-                  <ul className={styles.pricingList}>
-                    {prod.features.map((f) => (
-                      <li key={f} className={styles.pricingItem}>
-                        <span className={styles.pricingCheck} aria-hidden="true">
-                          <svg viewBox="0 0 12 12" width="10" height="10"><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>
-                        </span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
+                    <div className={styles.pricingPrice}>
+                      {strike !== null && (
+                        <span className={styles.pricingStrike}>Rp {strike.toLocaleString("id-ID")}</span>
+                      )}
+                      <span className={styles.pricingMain}>
+                        {price > 0
+                          ? <>Rp <CountUp to={price} duration={1400} format={(n) => n.toLocaleString("id-ID")} /></>
+                          : (id ? "Hubungi Admin" : "Contact Admin")}
+                      </span>
+                      <span className={styles.pricingPer}>/lifetime</span>
+                    </div>
+                    {saving > 0 && (
+                      <div className={styles.pricingSave}>{id ? `Hemat ${saving}%` : `Save ${saving}%`}</div>
+                    )}
 
-                  <a
-                    href={wa(prod.waText)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-wa"
-                    style={{ width: "100%", padding: 16, marginBottom: 12 }}
-                  >
-                    <WaIcon />
-                    {id ? `Beli ${prod.name}` : `Buy ${prod.name}`}
-                  </a>
-                  <Link href="/register" className="btn btn-ghost" style={{ width: "100%", padding: 14 }}>
-                    {id ? "Daftar Dulu" : "Register First"}
-                  </Link>
-                </div>
+                    <div className={styles.pricingDivider} />
+
+                    <ul className={styles.pricingList}>
+                      {prod.features.map((f, fi) => (
+                        <motion.li
+                          key={f}
+                          className={styles.pricingItem}
+                          initial={{ opacity: 0, x: -12 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ delay: 0.3 + fi * 0.07, duration: 0.5 }}
+                        >
+                          <span className={styles.pricingCheck} aria-hidden="true">
+                            <svg viewBox="0 0 12 12" width="10" height="10"><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>
+                          </span>
+                          {f}
+                        </motion.li>
+                      ))}
+                    </ul>
+
+                    <a
+                      href={wa(prod.waText)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-wa"
+                      style={{ width: "100%", padding: 16, marginBottom: 12 }}
+                      data-cursor={id ? "Beli" : "Buy"}
+                    >
+                      <WaIcon />
+                      {id ? `Beli ${prod.name}` : `Buy ${prod.name}`}
+                    </a>
+                    <Link href="/register" className="btn btn-ghost" style={{ width: "100%", padding: 14 }}>
+                      {id ? "Daftar Dulu" : "Register First"}
+                    </Link>
+                  </Tilt>
+                </Reveal>
               );
             })}
           </div>
@@ -387,25 +464,45 @@ export default function HomePage() {
       <section className="section" id="faq">
         <div className="wrap">
           <div className={styles.faqLayout}>
-            <div className={styles.sectionHead} style={{ marginBottom: 0 }}>
-              <span className="eyebrow">FAQ</span>
-              <h2 className={styles.sectionTitle}>{id ? "Pertanyaan yang sering muncul." : "Frequently asked."}</h2>
+            <SectionHead eyebrow="FAQ" title={id ? "Pertanyaan yang sering muncul." : "Frequently asked."}>
               <p className={styles.faqAside}>
                 {id ? "Belum terjawab? " : "Still unsure? "}
                 <a href={waUrl} target="_blank" rel="noopener noreferrer">{id ? "Tanya admin di WhatsApp" : "Ask the admin on WhatsApp"}</a>
               </p>
-            </div>
-            <div className={styles.faqList}>
-              {FAQ.map((f) => (
-                <details key={f.q} className={styles.faqItem}>
-                  <summary className={styles.faqQ}>
-                    <span>{f.q}</span>
-                    <span className={styles.faqIcon} aria-hidden="true" />
-                  </summary>
-                  <p className={styles.faqA}>{f.a}</p>
-                </details>
-              ))}
-            </div>
+            </SectionHead>
+            <Stagger className={styles.faqList}>
+              {FAQ.map((f, i) => {
+                const open = openFaq === i;
+                return (
+                  <StaggerItem key={f.q} className={`${styles.faqItem} ${open ? styles.faqOpen : ""}`}>
+                    <button
+                      type="button"
+                      className={styles.faqQ}
+                      aria-expanded={open}
+                      onClick={() => setOpenFaq(open ? null : i)}
+                    >
+                      <span className={styles.faqNum}>{String(i + 1).padStart(2, "0")}</span>
+                      <span className={styles.faqText}>{f.q}</span>
+                      <span className={styles.faqIcon} aria-hidden="true" />
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {open && (
+                        <motion.div
+                          key="a"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                          style={{ overflow: "hidden" }}
+                        >
+                          <p className={styles.faqA}>{f.a}</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </StaggerItem>
+                );
+              })}
+            </Stagger>
           </div>
         </div>
       </section>
@@ -413,32 +510,51 @@ export default function HomePage() {
       {/* ── Support Creator ────────────────────────────────────────────────── */}
       <section className="section">
         <div className="wrap">
-          <div className={`card ${styles.creatorCard} animate-in`}>
-            <div className={styles.creatorInner}>
-              <div className={styles.creatorLeft}>
-                <span className="eyebrow">{id ? "Kreator" : "Creator"}</span>
-                <h3 className={styles.creatorHeading}>{id ? "Support Kreator" : "Support the Creator"}</h3>
-                <p className={styles.creatorDesc}>
-                  {id
-                    ? "UNWANTED LABS dibuat oleh Bagus (Shifted) MIBR. Dukung terus karyanya di:"
-                    : "UNWANTED LABS is made by Bagus (Shifted) MIBR. Follow and support his work at:"}
-                </p>
+          <Reveal>
+            <Tilt max={3} className={`card ${styles.creatorCard}`}>
+              <div className={styles.creatorInner}>
+                <div className={styles.creatorLeft}>
+                  <span className="eyebrow"><Scramble text={id ? "Kreator" : "Creator"} /></span>
+                  <h3 className={styles.creatorHeading}>{id ? "Support Kreator" : "Support the Creator"}</h3>
+                  <p className={styles.creatorDesc}>
+                    {id
+                      ? "UNWANTED LABS dibuat oleh Bagus (Shifted) MIBR. Dukung terus karyanya di:"
+                      : "UNWANTED LABS is made by Bagus (Shifted) MIBR. Follow and support his work at:"}
+                  </p>
+                </div>
+                <div className={styles.socialGrid}>
+                  {SOCIALS.map((s) => (
+                    <a key={s.platform} href={s.url} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+                      <span className={`lbl ${styles.socialPlatform}`}>{s.platform}</span>
+                      <span className={styles.socialHandle}>{s.handle}</span>
+                      <span className={styles.socialArrow} aria-hidden="true">↗</span>
+                    </a>
+                  ))}
+                </div>
               </div>
-              <div className={styles.socialGrid}>
-                {SOCIALS.map((s) => (
-                  <a key={s.platform} href={s.url} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
-                    <span className={`lbl ${styles.socialPlatform}`}>{s.platform}</span>
-                    <span className={styles.socialHandle}>{s.handle}</span>
-                    <span className={styles.socialArrow} aria-hidden="true">↗</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
+            </Tilt>
+          </Reveal>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* ── CTA penutup + footer ──────────────────────────────────────────── */}
+      <section className={styles.finale}>
+        <div className="wrap">
+          <Reveal className={styles.finaleInner}>
+            <p className={styles.finaleKicker}>{id ? "Siap untuk 120fps?" : "Ready for 120fps?"}</p>
+            <Magnetic strength={0.25}>
+              <Link href="/register" className={`btn ${styles.ctaPrimary} ${styles.finaleBtn}`} data-cursor={id ? "Daftar" : "Join"}>
+                <span className={styles.ctaShine} aria-hidden="true" />
+                {id ? "Buat Akun Gratis" : "Create Free Account"}
+              </Link>
+            </Magnetic>
+          </Reveal>
+        </div>
+        <div className={styles.wordmark} aria-hidden="true">
+          <SplitText lines={[{ text: "UNWANTED" }]} inView stagger={0.06} />
+        </div>
+      </section>
+
       <footer className={styles.footer}>
         <div className="wrap">
           <div className="rule-soft" />
@@ -479,7 +595,7 @@ export default function HomePage() {
       </footer>
 
       {/* WA Float */}
-      <a href={waUrl} target="_blank" rel="noopener noreferrer" className="wa-float" title="Chat Admin via WhatsApp">
+      <a href={waUrl} target="_blank" rel="noopener noreferrer" className="wa-float" title="Chat Admin via WhatsApp" data-cursor="Chat">
         <WaIcon size={22} />
       </a>
     </>

@@ -1,0 +1,68 @@
+.chart { padding: 22px 24px 16px; margin-bottom: 28px; }
+.head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.k { font-size: 8px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--faint); margin-bottom: 10px; }
+.big { font-size: 34px; font-weight: 200; letter-spacing: -0.02em; line-height: 1; display: flex; align-items: baseline; gap: 12px; font-variant-numeric: tabular-nums; }
+.up, .down { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; }
+.up { color: var(--ok); }
+.down { color: var(--bad); }
+.legend { display: flex; gap: 18px; font-size: 10px; color: var(--mute); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.lgBar { width: 8px; height: 10px; background: rgba(255,255,255,0.7); display: inline-block; }
+.lgDot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; }
+
+.plot {
+  position: relative;
+  height: 120px;
+  display: grid;
+  grid-template-columns: repeat(30, 1fr);
+  gap: 3px;
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+  background-image: linear-gradient(var(--line-soft) 1px, transparent 1px);
+  background-size: 100% 25%;
+}
+.col { position: relative; height: 100%; display: flex; align-items: flex-end; cursor: default; }
+.bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.25));
+  transition: background 0.2s;
+}
+.col[data-on="1"] .bar { background: #fff; box-shadow: 0 0 16px rgba(255,255,255,0.5); }
+.col:not([data-on="1"]) .bar { opacity: 0.75; }
+.dot {
+  position: absolute;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--ok);
+  border: 2px solid #000;
+  box-sizing: content-box;
+  box-shadow: 0 0 10px var(--ok);
+  z-index: 2;
+}
+.tip {
+  position: absolute;
+  top: -8px;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  background: #fff;
+  color: #000;
+  font-size: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+.tip strong { font-size: 11px; }
+.axis { display: flex; justify-content: space-between; margin-top: 8px; font-family: var(--mono); font-size: 10px; color: var(--faint); }
+
+@media (max-width: 600px) {
+  .plot { gap: 1px; height: 96px; }
+}

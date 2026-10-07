@@ -4,13 +4,19 @@
   left: 0;
   right: 0;
   z-index: 50;
-  padding: 24px 0;
-  transition: padding 0.3s ease, background 0.3s ease;
+  transition: background 0.3s ease;
 }
+/* Jarak vertikal ada di .inner (bukan .nav) supaya banner pengumuman bisa
+   menempel rata di tepi atas layar. Selektor ganda mengalahkan .wrap global. */
+.nav .inner {
+  padding-top: 24px;
+  padding-bottom: 24px;
+  transition: padding 0.3s ease;
+}
+.scrolled .inner { padding-top: 16px; padding-bottom: 16px; }
 
 .scrolled {
   background: rgba(0, 0, 0, 0.86);
-  padding: 16px 0;
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
 }

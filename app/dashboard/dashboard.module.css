@@ -123,7 +123,8 @@
 }
 
 .studioTitle {
-  font-size: 20px;
+  font-size: clamp(26px, 3.2vw, 36px);
+  perspective: 600px;
   font-weight: 200;
   letter-spacing: -0.01em;
   margin-bottom: 6px;
@@ -203,13 +204,28 @@
   border-right: none;
 }
 .chip {
-  padding: 8px 14px;
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.3);
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
   border-right: 1px solid rgba(255,255,255,0.08);
 }
+.chipK {
+  font-size: 8px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.chipV {
+  font-size: 15px;
+  font-weight: 300;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.chipWarn .chipV { color: var(--warn); }
+.chipInfo .chipV { color: var(--info); }
 .chipWarn { color: rgba(255,200,100,0.85); border-color: rgba(255,200,100,0.15); }
 .chipInfo { color: rgba(120,200,255,0.85); border-color: rgba(120,200,255,0.15); }
 
@@ -288,4 +304,88 @@
   .actions { flex-direction: column; gap: 0; }
   .actions .btn { border-right: 1px solid !important; border-bottom: none; }
   .actions .btn:last-child { border-bottom: 1px solid !important; }
+}
+
+
+/* ══ Studio sinematik ═══════════════════════════════════════════════════ */
+.dropzone { padding: 56px 32px; background: linear-gradient(180deg, rgba(255,255,255,0.025), transparent); }
+.dropGlyph { color: rgba(255,255,255,0.55); margin: 0 auto 18px; display: block; transition: transform 0.4s cubic-bezier(0.22,1,0.36,1); }
+.dropArrow { animation: dropArrow 1.8s ease-in-out infinite; }
+@keyframes dropArrow {
+  0%, 100% { transform: translateY(2px); opacity: 0.6; }
+  50%      { transform: translateY(-3px); opacity: 1; }
+}
+.dropzone:hover .dropGlyph { transform: translateY(-3px) scale(1.05); }
+.dropzoneDrag .dropGlyph { transform: scale(1.18); color: #fff; }
+
+/* Bingkai cahaya berputar saat file diseret di atas dropzone */
+.dropBorder {
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  pointer-events: none;
+  opacity: 0;
+  background: conic-gradient(from var(--dz-angle, 0deg), transparent 0deg, #fff 50deg, transparent 110deg, transparent 180deg, rgba(255,255,255,0.6) 230deg, transparent 290deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  transition: opacity 0.3s ease;
+  animation: dzSpin 2.4s linear infinite;
+}
+.dropzoneDrag .dropBorder { opacity: 1; }
+@property --dz-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes dzSpin { to { --dz-angle: 360deg; } }
+
+/* Riak saat file dijatuhkan */
+.dropRipple {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: dropRipple 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes dropRipple {
+  from { transform: scale(0.2); opacity: 0.9; }
+  to   { transform: scale(18); opacity: 0; }
+}
+
+.terminal { margin-bottom: 0; border-top: 1px solid rgba(255,255,255,0.04); }
+
+/* Kartu sukses */
+.success {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 20px 0 0;
+  padding: 22px 24px;
+  border: 1px solid rgba(255,255,255,0.35);
+  background:
+    radial-gradient(ellipse 60% 140% at 0% 50%, rgba(255,255,255,0.10), transparent 60%),
+    rgba(255,255,255,0.02);
+  box-shadow: 0 0 60px -20px rgba(255,255,255,0.35);
+}
+.successMark { color: #fff; flex-shrink: 0; position: relative; z-index: 4; }
+.successText { position: relative; z-index: 4; min-width: 0; }
+.successTitle { font-size: 18px; font-weight: 300; letter-spacing: -0.01em; }
+.successSub {
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions { margin-top: 20px; }
+.downloadBtn { position: relative; animation: dlPulse 2.2s ease-in-out infinite; }
+@keyframes dlPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.45); }
+  50%      { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
 }

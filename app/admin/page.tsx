@@ -7,6 +7,11 @@ import { EMPTY_PRICING, type PricingShape, type ProductPricing } from "@/lib/pri
 import { STATE_META, type EngineStatus } from "@/lib/engine-status";
 import { StatusDot, useEngineStatus } from "@/components/EngineStatus";
 import EnginePanel from "./engine-panel";
+import ContentPanel from "./content-panel";
+import SignupChart from "./signup-chart";
+import { motion } from "motion/react";
+import SplitText from "@/components/fx/SplitText";
+import { CountUp } from "@/components/fx/misc";
 
 interface Device {
   id: string;
@@ -39,7 +44,7 @@ function fmtDate(ts?: { _seconds: number } | null) {
 }
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"users" | "engine" | "pricing">("users");
+  const [tab, setTab] = useState<"users" | "engine" | "content" | "pricing">("users");
   // Status untuk kartu ringkasan. Setelah admin menyimpan di tab Engine, nilai
   // dari panel dipakai langsung supaya kartu tidak menunggu polling berikutnya.
   const { status: liveEngine } = useEngineStatus();
@@ -169,7 +174,7 @@ export default function AdminPage() {
           <div className={`${styles.pageHeader} animate-in`}>
             <div className={styles.pageHeaderLeft}>
               <div className={styles.pageHeaderSub}>UNWANTED LABS — Admin</div>
-              <h1 className={styles.pageHeaderTitle}>Panel Kontrol</h1>
+              <h1 className={styles.pageHeaderTitle}><SplitText lines={[{ text: "Panel Kontrol" }]} stagger={0.03} /></h1>
             </div>
             <div className={styles.pageHeaderRight}>
               <button type="button" className="btn btn-ghost" style={{ padding: "8px 16px", fontSize: 9 }} onClick={refresh}>
@@ -203,22 +208,24 @@ export default function AdminPage() {
               </button>
               <div className={`card ${styles.statCell}`}>
                 <div className={styles.statK}>Total Akun</div>
-                <div className={styles.statV}>{users.length}</div>
+                <div className={styles.statV}>{loading ? "—" : <CountUp to={users.length} />}</div>
               </div>
               <div className={`card ${styles.statCell}`}>
                 <div className={styles.statK}>MP4 Aktif</div>
-                <div className={styles.statV}>{totalMp4}</div>
+                <div className={styles.statV}>{loading ? "—" : <CountUp to={totalMp4} />}</div>
               </div>
               <div className={`card ${styles.statCell}`}>
                 <div className={styles.statK}>Analytics Aktif</div>
-                <div className={styles.statV}>{totalAnalytics}</div>
+                <div className={styles.statV}>{loading ? "—" : <CountUp to={totalAnalytics} />}</div>
               </div>
               <div className={`card ${styles.statCell}`}>
                 <div className={styles.statK}>Belum Beli</div>
-                <div className={styles.statV}>{totalNone}</div>
+                <div className={styles.statV}>{loading ? "—" : <CountUp to={totalNone} />}</div>
               </div>
             </div>
           </div>
+
+          {!loading && users.length > 0 && <SignupChart users={users} />}
 
           <div className={`rule ${styles.rule}`} />
 
@@ -228,6 +235,7 @@ export default function AdminPage() {
             <button type="button" className={`tab ${tab === "engine" ? "active" : ""}`} onClick={() => setTab("engine")}>
               Engine
             </button>
+            <button type="button" className={`tab ${tab === "content" ? "active" : ""}`} onClick={() => setTab("content")}>Konten</button>
             <button type="button" className={`tab ${tab === "pricing" ? "active" : ""}`} onClick={() => setTab("pricing")}>Harga</button>
           </div>
 
@@ -246,7 +254,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className={styles.tableWrap}>
+              <div className={styles.tableWrap} data-lenis-prevent>
                 {loading ? (
                   <div className={styles.tableLoading}>
                     <div className="spinner" style={{ width: 14, height: 14 }} />
@@ -268,8 +276,13 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map((u) => (
-                        <tr key={u.uid}>
+                      {filtered.map((u, ri) => (
+                        <motion.tr
+                          key={u.uid}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: Math.min(ri, 15) * 0.03, duration: 0.4 }}
+                        >
                           <td>
                             <div className={styles.userCell}>
                               <div className={styles.userAvatar}>{(u.name || u.email || "?")[0].toUpperCase()}</div>
@@ -372,7 +385,7 @@ export default function AdminPage() {
                               </button>
                             </div>
                           </td>
-                        </tr>
+                        </motion.tr>
                       ))}
                     </tbody>
                   </table>
@@ -383,6 +396,9 @@ export default function AdminPage() {
 
           {/* Engine tab */}
           {tab === "engine" && <EnginePanel onToast={showToast} onStatus={setSavedEngine} />}
+
+          {/* Content tab */}
+          {tab === "content" && <ContentPanel onToast={showToast} />}
 
           {/* Pricing tab */}
           {tab === "pricing" && (

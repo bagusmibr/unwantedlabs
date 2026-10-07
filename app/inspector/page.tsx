@@ -1,4 +1,5 @@
 "use client";
+import SplitText from "@/components/fx/SplitText";
 import { useState, useEffect, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import { useLang } from "@/lib/lang";
@@ -12,7 +13,6 @@ interface VideoMeta {
   provider_name: string; width: number | null; height: number | null;
   duration: number | null; fps: number | null;
   tiktokTier: number | null;  // TikTok processing tier (120 for dual-audio trick)
-  hasDualAudio: boolean;      // true = second audio track detected
   bitrateKbps: number | null;
   fileSize: number | null; codecType: string | null; definition: string | null;
   videoId: string | null; embedUrl: string | null; region: string | null;
@@ -174,7 +174,7 @@ export default function InspectorPage() {
               <span style={{ opacity: 0.4 }}>·</span>
               <span>{id ? "Tanpa Login" : "No Login"}</span>
             </div>
-            <h1 className={styles.title}>Video Inspector</h1>
+            <h1 className={styles.title}><SplitText lines={[{ text: "Video Inspector" }]} stagger={0.03} /></h1>
             <p className={styles.sub}>{id ? "Analisis metadata video TikTok" : "Analyze TikTok video metadata"}</p>
           </div>
 
