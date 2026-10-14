@@ -1,0 +1,24 @@
+/* Keadaan sebelum terlihat: pudar, buram, sedikit turun & mengecil */
+.armed > * {
+  opacity: 0;
+  transform: translate3d(0, 56px, 0) scale(0.97);
+  filter: blur(14px);
+  transition:
+    opacity 1.1s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1.4s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Anak berikutnya menyusul sedikit lebih lambat */
+.armed > * + * { transition-delay: 0.12s; }
+
+.armed.shown > * {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+/* Selesai: lepaskan semua efek supaya tidak ada layer/filter tersisa */
+.armed.done > * { transition: none; will-change: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .armed > * { opacity: 1; transform: none; filter: none; transition: none; }
+}

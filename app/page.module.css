@@ -808,15 +808,3 @@
   color: rgba(255,255,255,0.85);
 }
 .finaleBtn { padding: 20px 40px; font-size: 11px; }
-/* Sapuan putih di judul seksi */
-.sectionTitle { position: relative; align-self: flex-start; }
-.titleWipe {
-  position: absolute;
-  left: -4px;
-  right: -4px;
-  top: 0.08em;
-  bottom: 0.02em;
-  background: #fff;
-  pointer-events: none;
-  clip-path: inset(0 100% 0 0);
-}

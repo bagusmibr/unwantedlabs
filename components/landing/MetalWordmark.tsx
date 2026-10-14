@@ -1,15 +1,17 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useFxLevel } from "@/components/fx/useFxLevel";
+import { LOGO_BOX, LOGO_PATH } from "./logoPath";
 import styles from "./MetalWordmark.module.css";
 
 /**
- * Wordmark "UNWANTED" berbahan metal krom yang bercahaya.
+ * Logo UNWANTED raksasa berbahan metal krom yang bercahaya (penutup landing).
  *
- * Disusun dari beberapa lapis <text> SVG yang identik (bukan text-stroke —
- * stroke ikut menggambar kontur tumpang-tindih di dalam huruf):
- *   1. glow      — teks putih yang di-blur, berdenyut pelan
- *   2. extrude   — 8 salinan bergeser ke bawah dengan gradien gelap → tebal 3D
+ * Bentuknya = logo asli (public/logo.png) yang sudah diubah ke path vektor
+ * (logoPath.ts), disusun dari beberapa lapis path yang identik:
+ *   1. glow      — salinan putih yang di-blur, berdenyut pelan (lapisan HTML
+ *                  terpisah: di-blur sekali, lalu hanya opacity yang berubah)
+ *   2. extrude   — salinan bergeser ke bawah dengan gradien gelap → tebal 3D
  *   3. rim       — salinan terang sedikit ke atas → tepi atas berkilat
  *   4. metal     — gradien krom (horizon terang di tengah, khas logam)
  *   5. sweep     — pita kilau yang menyapu dari kiri ke kanan berkala
@@ -17,17 +19,19 @@ import styles from "./MetalWordmark.module.css";
  * Plus pantulan di "lantai" dan kilatan bintang kecil di tepi huruf.
  *
  * Gradien memakai userSpaceOnUse sehingga kilau mengalir mulus melintasi
- * semua huruf. Saat masuk layar, wordmark bangkit dari posisi miring (--e).
- *
- * Catatan: JANGAN memakai textLength. Chrome menghitungnya berbeda per lapis
- * bila SVG diskalakan, sehingga lapisan tergambar dengan lebar berbeda dan
- * hurufnya terlihat dobel. Teks memakai lebar alaminya; viewBox disesuaikan
- * dengan lebar terukur setelah font termuat.
+ * semua huruf. Saat masuk layar, logo bangkit dari posisi miring (--e).
  */
 
-const WORD = "UNWANTED";
-const BASE = 176;      // baseline teks di viewBox
-const DEPTH = 8;       // tebal extrude (px viewBox)
+const { x: BX, y: BY, w: BW, h: BH } = LOGO_BOX;
+const PAD = 24;
+const VIEWBOX = `${BX - PAD} ${BY - PAD} ${BW + PAD * 2} ${BH + PAD * 2}`;
+const DEPTH = 7; // tebal extrude (satuan viewBox)
+const GLINTS: [number, number, number][] = [
+  [BX + BW * 0.06, BY + 1, 0],
+  [BX + BW * 0.47, BY + 1, 1.7],
+  [BX + BW * 0.9, BY + 2, 3.2],
+  [BX + BW * 0.3, BY + BH - 1, 4.3],
+];
 
 export default function MetalWordmark() {
   const level = useFxLevel();
@@ -35,21 +39,6 @@ export default function MetalWordmark() {
   const ref = useRef<HTMLDivElement>(null);
   const spotRef = useRef<SVGRadialGradientElement>(null);
   const id = (n: string) => `${uid}-${n}`;
-  // perkiraan awal (Inter 700, 200px); diukur ulang setelah font siap
-  const [vb, setVb] = useState("-110 0 1220 220");
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const measure = () => {
-      const t = el.querySelector<SVGTextElement>(`.${styles.metal}`);
-      if (!t) return;
-      const b = t.getBBox();
-      if (b.width > 0) setVb(`${(b.x - 16).toFixed(1)} 0 ${(b.width + 32).toFixed(1)} 220`);
-    };
-    measure();
-    if (document.fonts?.ready) document.fonts.ready.then(measure);
-  }, []);
   const url = (n: string) => `url(#${id(n)})`;
 
   // Masuk layar (scroll) + sorotan kursor
@@ -62,8 +51,7 @@ export default function MetalWordmark() {
       raf = visible ? requestAnimationFrame(tick) : 0;
       const r = el.getBoundingClientRect();
       const e = Math.min(1, Math.max(0, (innerHeight - r.top) / (innerHeight * 0.75)));
-      const eased = 1 - Math.pow(1 - e, 3);
-      const v = eased.toFixed(4);
+      const v = (1 - Math.pow(1 - e, 3)).toFixed(4);
       if (v !== last) { last = v; el.style.setProperty("--e", v); }
     };
     const svg = el.querySelector<SVGSVGElement>(`.${styles.svg}`);
@@ -81,7 +69,7 @@ export default function MetalWordmark() {
       const b = svg.getBoundingClientRect();
       const v = svg.viewBox.baseVal;
       spot.setAttribute("cx", String(v.x + ((ev.clientX - b.left) / b.width) * v.width));
-      spot.setAttribute("cy", String(((ev.clientY - b.top) / b.height) * 220));
+      spot.setAttribute("cy", String(v.y + ((ev.clientY - b.top) / b.height) * v.height));
       el.dataset.hover = "1";
     };
     const onLeave = () => { delete el.dataset.hover; };
@@ -97,46 +85,34 @@ export default function MetalWordmark() {
     };
   }, [level]);
 
-  const text = (props: React.SVGProps<SVGTextElement>, key?: string | number) => (
-    <text
-      key={key}
-      x="500"
-      y={BASE}
-      textAnchor="middle"
-      className={styles.t}
-      {...props}
-    >
-      {WORD}
-    </text>
+  const logo = (props: React.SVGProps<SVGPathElement>, key?: string | number) => (
+    <path key={key} d={LOGO_PATH} fillRule="evenodd" {...props} />
   );
 
   return (
     <div ref={ref} className={styles.wm} aria-hidden="true">
       <div className={styles.floorGlow} />
       <div className={styles.tilt}>
-        {/* glow: lapisan terpisah yang di-blur sekali lalu hanya diubah
-            opacity-nya (murah) — bukan filter yang dihitung ulang per frame */}
         <div className={styles.glowWrap}>
-          <svg viewBox={vb} className={styles.glow} overflow="visible">
-            {text({ fill: "#fff" })}
-          </svg>
+          <svg viewBox={VIEWBOX} className={styles.glow}>{logo({ fill: "#fff" })}</svg>
         </div>
-        <svg viewBox={vb} className={styles.svg} overflow="visible">
+
+        <svg viewBox={VIEWBOX} className={styles.svg} overflow="visible">
           <defs>
-            <linearGradient id={id("chrome")} gradientUnits="userSpaceOnUse" x1="0" y1="30" x2="0" y2={BASE}>
+            <linearGradient id={id("chrome")} gradientUnits="userSpaceOnUse" x1="0" y1={BY} x2="0" y2={BY + BH}>
               <stop offset="0" stopColor="#ffffff" />
               <stop offset="0.2" stopColor="#ececec" />
               <stop offset="0.44" stopColor="#8a8a8a" />
               <stop offset="0.5" stopColor="#ffffff" />
-              <stop offset="0.54" stopColor="#3f3f3f" />
-              <stop offset="0.76" stopColor="#a3a3a3" />
+              <stop offset="0.55" stopColor="#3f3f3f" />
+              <stop offset="0.78" stopColor="#a3a3a3" />
               <stop offset="1" stopColor="#efefef" />
             </linearGradient>
-            <linearGradient id={id("side")} gradientUnits="userSpaceOnUse" x1="0" y1="40" x2="0" y2={BASE + DEPTH}>
+            <linearGradient id={id("side")} gradientUnits="userSpaceOnUse" x1="0" y1={BY} x2="0" y2={BY + BH + DEPTH}>
               <stop offset="0" stopColor="#5c5c5c" />
-              <stop offset="1" stopColor="#161616" />
+              <stop offset="1" stopColor="#141414" />
             </linearGradient>
-            <linearGradient id={id("sweep")} gradientUnits="userSpaceOnUse" x1="-260" y1="0" x2="-60" y2="60">
+            <linearGradient id={id("sweep")} gradientUnits="userSpaceOnUse" x1={BX - 170} y1="0" x2={BX - 50} y2="40">
               <stop offset="0" stopColor="#fff" stopOpacity="0" />
               <stop offset="0.5" stopColor="#fff" stopOpacity="0.95" />
               <stop offset="1" stopColor="#fff" stopOpacity="0" />
@@ -144,44 +120,42 @@ export default function MetalWordmark() {
                 <animateTransform
                   attributeName="gradientTransform"
                   type="translate"
-                  values="0 0; 1500 0; 1500 0"
+                  values={`0 0; ${BW + 260} 0; ${BW + 260} 0`}
                   keyTimes="0; 0.45; 1"
                   dur="5.5s"
                   repeatCount="indefinite"
                 />
               )}
             </linearGradient>
-            <radialGradient ref={spotRef} id={id("spot")} gradientUnits="userSpaceOnUse" cx="500" cy="110" r="190">
-              <stop offset="0" stopColor="#fff" stopOpacity="0.85" />
-              <stop offset="0.45" stopColor="#fff" stopOpacity="0.18" />
+            <radialGradient ref={spotRef} id={id("spot")} gradientUnits="userSpaceOnUse" cx={BX + BW / 2} cy={BY + BH / 2} r="110">
+              <stop offset="0" stopColor="#fff" stopOpacity="0.9" />
+              <stop offset="0.45" stopColor="#fff" stopOpacity="0.2" />
               <stop offset="1" stopColor="#fff" stopOpacity="0" />
             </radialGradient>
           </defs>
 
           <g>
-            {Array.from({ length: DEPTH }, (_, i) => text({ y: BASE + DEPTH - i, fill: url("side") }, i))}
+            {Array.from({ length: DEPTH }, (_, i) =>
+              logo({ transform: `translate(0 ${DEPTH - i})`, fill: url("side") }, i))}
           </g>
-          {text({ y: BASE - 1.6, fill: "rgba(255,255,255,0.95)" })}
-          {text({ fill: url("chrome"), className: `${styles.t} ${styles.metal}` })}
-          {text({ fill: url("sweep"), className: `${styles.t} ${styles.sweep}` })}
-          {text({ fill: url("spot"), className: `${styles.t} ${styles.spot}` })}
+          {logo({ transform: "translate(0 -0.9)", fill: "rgba(255,255,255,0.95)" })}
+          {logo({ fill: url("chrome") })}
+          {logo({ fill: url("sweep"), className: styles.sweep })}
+          {logo({ fill: url("spot"), className: styles.spot })}
 
-          {/* kilatan bintang di tepi huruf */}
-          {[[96, 38, 0], [512, 34, 1.6], [880, 44, 3.1], [300, 176, 4.2]].map(([x, y, d], i) => (
+          {GLINTS.map(([x, y, d], i) => (
             <path
               key={i}
               className={styles.glint}
               style={{ animationDelay: `${d}s`, transformOrigin: `${x}px ${y}px` }}
-              d={`M${x} ${y - 14} L${x + 2.2} ${y - 2.2} L${x + 14} ${y} L${x + 2.2} ${y + 2.2} L${x} ${y + 14} L${x - 2.2} ${y + 2.2} L${x - 14} ${y} L${x - 2.2} ${y - 2.2} Z`}
+              d={`M${x} ${y - 9} L${x + 1.4} ${y - 1.4} L${x + 9} ${y} L${x + 1.4} ${y + 1.4} L${x} ${y + 9} L${x - 1.4} ${y + 1.4} L${x - 9} ${y} L${x - 1.4} ${y - 1.4} Z`}
               fill="#fff"
             />
           ))}
         </svg>
 
         {/* pantulan di lantai */}
-        <svg viewBox={vb} className={styles.reflect} overflow="visible">
-          {text({ fill: url("chrome") })}
-        </svg>
+        <svg viewBox={VIEWBOX} className={styles.reflect}>{logo({ fill: url("chrome") })}</svg>
       </div>
     </div>
   );

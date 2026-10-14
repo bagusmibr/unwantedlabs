@@ -168,7 +168,7 @@ export default function FpsShowcase() {
   }, [level]);
 
   return (
-    <section ref={root} className={styles.fps} data-morph="1" data-chapter="120 FPS" data-stage="0">
+    <section ref={root} className={styles.fps} data-morph="1" data-reveal data-stage="0">
       <div className={`wrap ${styles.inner}`}>
         <div className={styles.left}>
           <span className="eyebrow">{id ? "Frame rate" : "Frame rate"}</span>

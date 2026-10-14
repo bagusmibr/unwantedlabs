@@ -16,9 +16,8 @@ import { Reveal, Stagger, StaggerItem } from "@/components/fx/Reveal";
 import { CountUp, Marquee } from "@/components/fx/misc";
 import Storyline from "@/components/landing/Storyline";
 import Intro from "@/components/landing/Intro";
-import { HeroViewfinder, EditorTimeline } from "@/components/landing/EditorHUD";
 import FpsShowcase from "@/components/landing/FpsShowcase";
-import SceneCut from "@/components/landing/SceneCut";
+import SectionReveal from "@/components/landing/SectionReveal";
 import MetalWordmark from "@/components/landing/MetalWordmark";
 import styles from "./page.module.css";
 import { useLang } from "@/lib/lang";
@@ -37,15 +36,6 @@ function SectionHead({ eyebrow, title, children }: { eyebrow: string; title: str
       <span className="eyebrow"><Scramble text={eyebrow} /></span>
       <h2 className={styles.sectionTitle}>
         <SplitText lines={[{ text: title }]} inView stagger={0.012} />
-        {/* sapuan putih ala transisi editor: menutup lalu membuka judul */}
-        <motion.span
-          className={styles.titleWipe}
-          aria-hidden="true"
-          initial={{ clipPath: "inset(0 100% 0 0)" }}
-          whileInView={{ clipPath: ["inset(0 100% 0 0)", "inset(0 0% 0 0)", "inset(0 0% 0 100%)"] }}
-          viewport={{ once: true, margin: "0px 0px -10% 0px" }}
-          transition={{ duration: 1.1, times: [0, 0.45, 1], ease: [0.76, 0, 0.24, 1] }}
-        />
       </h2>
       {children}
     </div>
@@ -202,13 +192,12 @@ export default function HomePage() {
       <Intro />
       <Navbar />
       <MorphField />
-      <EditorTimeline />
+      <SectionReveal />
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section className={styles.hero} data-morph="0" data-chapter="Intro">
+      <section className={styles.hero} data-morph="0">
         <div className={styles.heroGlow} aria-hidden="true" />
         <div className={styles.heroVignette} aria-hidden="true" />
-        <HeroViewfinder />
 
         <div className={`wrap ${styles.heroInner}`}>
           {/* Hero memakai animasi CSS (fx-rise), bukan Motion: harus terlihat
@@ -279,7 +268,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Stats ─────────────────────────────────────────────────────────── */}
-      <section id="stats" className={`section-sm ${styles.statsSection}`} data-morph="0" data-chapter="Stats">
+      <section id="stats" className={`section-sm ${styles.statsSection}`} data-morph="0" data-reveal>
         <div className="wrap">
           <Stagger className={styles.statsGrid}>
             {[
@@ -302,15 +291,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      <SceneCut scene="SC 02" label={id ? "Frame rate" : "Frame rate"} tc="00:00:08:000" />
 
       {/* ── Showcase FPS: tipografi kinetik + demo ────────────────────────── */}
       <FpsShowcase />
 
-      <SceneCut scene="SC 03" label={id ? "Alur kerja" : "Workflow"} tc="00:00:21:060" />
 
       {/* ── Storyline (scroll) ────────────────────────────────────────────── */}
-      <section className={styles.storySection} data-morph="2" data-chapter={id ? "Alur" : "Workflow"}>
+      <section className={styles.storySection} data-morph="2">
         <div className="wrap">
           <SectionHead
             eyebrow={id ? "Alur kerja" : "The workflow"}
@@ -321,7 +308,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Features ──────────────────────────────────────────────────────── */}
-      <section className="section" data-morph="2" data-chapter={id ? "Fitur" : "Features"}>
+      <section className="section" data-morph="2" data-reveal>
         <div className="wrap">
           <SectionHead
             eyebrow={id ? "Fitur Utama" : "Core Features"}
@@ -348,7 +335,7 @@ export default function HomePage() {
 
       {/* ── Demo before/after (diatur admin) ──────────────────────────────── */}
       {demoReady && (
-        <section className="section" id="demo" data-morph="2" data-chapter="Demo">
+        <section className="section" id="demo" data-morph="2" data-reveal>
           <div className="wrap">
             <SectionHead
               eyebrow="Demo"
@@ -362,7 +349,7 @@ export default function HomePage() {
       )}
 
       {/* ── How it works ──────────────────────────────────────────────────── */}
-      <section className="section" data-morph="2" data-chapter={id ? "Mulai" : "Start"}>
+      <section className="section" data-morph="2" data-reveal>
         <div className="wrap">
           <SectionHead
             eyebrow={id ? "Cara Mulai" : "Getting Started"}
@@ -388,10 +375,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      <SceneCut scene="SC 04" label={id ? "Harga" : "Pricing"} tc="00:00:39:090" />
 
       {/* ── Pricing ───────────────────────────────────────────────────────── */}
-      <section className="section" id="pricing" data-morph="3" data-chapter={id ? "Harga" : "Pricing"}>
+      <section className="section" id="pricing" data-morph="3" data-reveal>
         <div className="wrap">
           <SectionHead
             eyebrow={id ? "Harga" : "Pricing"}
@@ -486,7 +472,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FAQ ───────────────────────────────────────────────────────────── */}
-      <section className="section" id="faq" data-morph="3" data-chapter="FAQ">
+      <section className="section" id="faq" data-morph="3" data-reveal>
         <div className="wrap">
           <div className={styles.faqLayout}>
             <SectionHead eyebrow="FAQ" title={id ? "Pertanyaan yang sering muncul." : "Frequently asked."}>
@@ -533,7 +519,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Support Creator ────────────────────────────────────────────────── */}
-      <section className="section" data-morph="3" data-chapter={id ? "Kreator" : "Creator"}>
+      <section className="section" data-morph="3" data-reveal>
         <div className="wrap">
           <Reveal>
             <Tilt max={3} className={`card ${styles.creatorCard}`}>
@@ -563,7 +549,7 @@ export default function HomePage() {
       </section>
 
       {/* ── CTA penutup + footer ──────────────────────────────────────────── */}
-      <section className={styles.finale} data-morph="4" data-chapter="End">
+      <section className={styles.finale} data-morph="4" data-reveal>
         <div className="wrap">
           <Reveal className={styles.finaleInner}>
             <p className={styles.finaleKicker}>{id ? "Siap untuk 120fps?" : "Ready for 120fps?"}</p>
